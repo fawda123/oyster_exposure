@@ -1,9 +1,13 @@
 library(tidyverse)
 library(readxl)
 library(here)
+library(janitor)
 
 # consistent treatment terminology names
-trts <- c("7.7A0.2", "7.7A0.5", "7.7C", "8.0A0.2", "8.0C")
+trts <- tibble(
+  shrtlab = c("7.7A0.2", "7.7A0.5", "7.7C", "8.0A0.2", "8.0C"),
+  lngslab = c("7.7 Fluctuating 0.2A", "7.7 Fluctuating 0.5A", "7.7 Constant", "8.0 Fluctuating 0.2A", "8.0 Constant")
+  )
 
 # weight data processing --------------------------------------------------
 
@@ -36,3 +40,18 @@ alllen <- read_excel(here('data/raw', 'preliminary_oyster_data.xlsx'),
   mutate(
     lendif = 
   )
+
+
+# respiration data --------------------------------------------------------
+
+# respoiration, in umol_hr_g
+allres <- read.csv(here::here("data/raw", "Respiration_oyster_alldata.csv"), header = T, stringsAsFactors = F) %>% 
+  clean_names %>% 
+  na.omit %>% 
+  select(week, treatment, jar, id = oyster_id, resp = respiration_rate_umol_hr_g, species) %>% 
+  mutate(
+    ph = gsub('(^[0-9])*\\s.*$', '\\1', treatment), 
+    amp = gsub('^[0-9]\\.[0-9]\\s', '', treatment)
+  )
+
+save(allres, file = here::here('data', 'allres.RData'), compress = 'xz')
