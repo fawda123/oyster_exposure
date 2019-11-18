@@ -1,0 +1,90 @@
+---
+title: "Oyster adventures"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, warning=FALSE, message=FALSE, echo = T}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(sjPlot)
+library(multcompView)
+library(here)
+
+# import oyster data
+dat <- read.csv(here::here('data/raw', 'field_data.csv'), stringsAsFactors = F) %>% 
+  select(Exposure, Organism, Full_ID, Station, Group, Individual, Length_mm, Final_Weight) %>% 
+  mutate(
+    Station = factor(Station, levels = c('OUT', 'EDG', 'MID')), 
+    Exposure = factor(Exposure, levels = c('Pre', 'Post'))
+  ) %>% 
+  rename(
+    Weight = Final_Weight
+  ) %>% 
+  filter(!Organism %in% 'Mussels') %>% 
+  gather('var', 'val', Length_mm, Weight)
+
+# proc
+datprc <- dat %>%
+  group_by(Organism, var) %>% 
+  nest() %>% 
+  mutate(
+    lmmod = map(data, ~aov(val ~ Exposure * Station, data = .x)),
+    phmod = map(lmmod, TukeyHSD),
+    ltmod = map(phmod, function(x){
+
+      modhsd <- x %>% 
+        .$`Exposure:Station` %>% 
+        data.frame
+      pvals <- modhsd$p.adj
+      names(pvals) <- rownames(modhsd)
+      lets <- multcompLetters(pvals)
+      
+      return(lets)
+      
+    }),
+    plors = pmap(list(Organism, var, lmmod), function(Organism, var, lmmod){
+      
+      plot_model(lmmod, type = 'int', mdrt.values = 'meansd') + ggtitle(paste(Organism, var, sep = ', '))
+      
+    })
+  )
+
+```
+
+
+```{r fig.height = 4, fig.width = 4}
+plofun <- function(x){
+  
+  psig=as.numeric(apply(x$`Exposure:Station`[,2:3],1,prod)>=0)+1
+  op=par(mar=c(4.2,9,3.8,2))
+  plot(x,col=psig,yaxt="n")
+  for (j in 1:length(psig)){
+  axis(2,at=j,labels=rownames(x$`Exposure:Station`)[length(psig)-j+1],
+       las=1,cex.axis=.8,col.axis=psig[length(psig)-j+1])
+  }
+  par(op)
+}
+
+datprc$plors[[1]]
+datprc$ltmod[[1]]
+plofun(datprc$phmod[[1]])
+
+datprc$plors[[2]]
+datprc$ltmod[[2]]
+plofun(datprc$phmod[[2]])
+
+datprc$plors[[3]]
+datprc$ltmod[[3]]
+plofun(datprc$phmod[[3]])
+
+datprc$plors[[4]]
+datprc$ltmod[[4]]
+plofun(datprc$phmod[[4]])
+```
+
+```{r}
+
+```
+
