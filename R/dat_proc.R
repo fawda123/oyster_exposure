@@ -5,6 +5,7 @@ library(janitor)
 library(lmerTest)
 library(psycho)
 library(hrbrthemes)
+library(patchwork)
 
 # consistent treatment terminology names
 trts <- tibble(
@@ -173,11 +174,17 @@ dismods <- alldis %>%
       cnsval <- get_contrasts(mixmod, 'trt') %>% 
         mutate(
           sig = ifelse(p < 0.05, 'sig', 'notsig'),
-          sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'signifcant'))
+          sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'significant'))
         )
       
-      # mean estimate plots
-      subttl <- paste0('Total dissolution types, week ', week, ', ', species, ' oyster')
+      # sample size
+      n <- mixmod@frame %>% nrow
+      
+      # labels
+      subttl <- paste0('Respiration (umol/hr/g), week ', week, ', ', species, ' oyster')
+      captns <- paste0('Significance where CI does not include zero, alpha = 0.05, total n = ', n)
+      
+      # mean esimate plots
       p1 <- ggplot(mnsval, aes(x = trt, y = Mean)) + 
         geom_point(size = 3) + 
         geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher), colour = 'black', size = 1) + 
@@ -194,7 +201,7 @@ dismods <- alldis %>%
         geom_point(aes(colour = sig), size = 3) + 
         geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher, colour = sig), size = 1) + 
         labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', title = 'Treatment differences', subtitle = subttl,
-             caption = 'Significance based on differences where CI does not include zero, alpha = 0.05') +
+             caption = captns) +
         theme_ipsum() + 
         theme(
           legend.title = element_blank(), 
