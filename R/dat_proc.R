@@ -4,6 +4,7 @@ library(here)
 library(janitor)
 library(lmerTest)
 library(psycho)
+library(hrbrthemes)
 
 # consistent treatment terminology names
 trts <- tibble(
@@ -61,6 +62,8 @@ save(allres, file = here::here('data', 'allres.RData'), compress = 'xz')
 
 # respiration models ------------------------------------------------------
 
+data(allres)
+
 # fit separate mixed models by species, week, jar as random effect
 resmods <- allres %>%
   group_by(week, species) %>% 
@@ -93,7 +96,7 @@ resmods <- allres %>%
       # mean estimate plots
 
       p1 <- ggplot(mnsval, aes(x = trt, y = Mean)) + 
-        geom_point(size = 2) + 
+        geom_point(size = 3) + 
         geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher), colour = 'black', size = 1) + 
         labs(x = NULL, y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl) + 
         theme_ipsum() + 
@@ -105,8 +108,8 @@ resmods <- allres %>%
       
       # contrast plots
       p2 <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) + 
-        geom_point(aes(colour = sig), size = 2) + 
-        geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher), colour = 'black', size = 1) + 
+        geom_point(aes(colour = sig), size = 3) + 
+        geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher, colour = sig), size = 1) + 
         labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', title = 'Treatment differences', subtitle = subttl, caption = captns) +
         theme_ipsum() + 
         theme(
@@ -127,4 +130,87 @@ resmods <- allres %>%
 
 save(resmods, file = here::here('data', 'resmods.RData'), compress = 'xz')
 
+# dissolution data --------------------------------------------------------
+
+# there are multiple pictures per individual - dissolution averaged across pictures by jar, treatment, species, week, id
+alldis <- read.csv(here::here("data/raw", "SEM scoring datasheet_MRVERSION.csv"), header = T, stringsAsFactors = F) %>% 
+  clean_names %>% 
+  select(week, trt = treatment, jar, id = individual_id, species, dissolution_score, total, picture) %>% 
+  mutate(
+    trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab), 
+    jar = factor(jar)
+  ) %>% 
+  group_by(week, trt, jar, id, species) %>% 
+  summarise(
+    total = mean(total, na.rm = T),
+    dissolution_score = mean(dissolution_score, na.rm = T)
+  ) %>% 
+  ungroup %>% 
+  filter(week != 0)
+
+save(alldis, file = here::here('data', 'alldis.RData'), compress = 'xz')
+
+# dissolution models ------------------------------------------------------
+
+data(alldis)
+
+# fit separate mixed models by species, week, jar as random effect
+dismods <- alldis %>%
+  group_by(week, species) %>% 
+  nest %>% 
+  mutate(
+    mixmod = map(data, function(x){
+      
+      lmerTest::lmer(total ~ trt + (1|jar), data = x)
+      
+    }),
+    anomod = map(mixmod, anova), 
+    summod = map(mixmod, analyze),
+    plomod = pmap(list(week, species, mixmod), function(week, species, mixmod){
+      
+      # estimates
+      mnsval <- get_means(mixmod, 'trt')
+      cnsval <- get_contrasts(mixmod, 'trt') %>% 
+        mutate(
+          sig = ifelse(p < 0.05, 'sig', 'notsig'),
+          sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'signifcant'))
+        )
+      
+      # mean estimate plots
+      subttl <- paste0('Total dissolution types, week ', week, ', ', species, ' oyster')
+      p1 <- ggplot(mnsval, aes(x = trt, y = Mean)) + 
+        geom_point(size = 3) + 
+        geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher), colour = 'black', size = 1) + 
+        labs(x = NULL, y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl) + 
+        theme_ipsum() + 
+        theme(
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) + 
+        coord_flip()
+      
+      # contrast plots
+      p2 <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) + 
+        geom_point(aes(colour = sig), size = 3) + 
+        geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher, colour = sig), size = 1) + 
+        labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', title = 'Treatment differences', subtitle = subttl,
+             caption = 'Significance based on differences where CI does not include zero, alpha = 0.05') +
+        theme_ipsum() + 
+        theme(
+          legend.title = element_blank(), 
+          legend.position = 'bottom', 
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) +
+        geom_hline(yintercept = 0, linetype = 'dotted', size = 1) + 
+        scale_colour_manual(drop = F, values = c('black', 'tomato1')) + 
+        coord_flip()
+      
+      p1 + p2 + plot_layout(ncol  = 2)   
+      
+      
+    })
+  )
+
+save(dismods, file = here::here('data', 'dismods.RData'), compress = 'xz')
 
