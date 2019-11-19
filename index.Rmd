@@ -29,13 +29,13 @@ data(dismods)
 
 ### Raw data
 
-```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '50%'}
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
 
 p <- ggplot(allres, aes(x = factor(week), y = resp, colour = species, fill = species)) + 
   geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
   geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
   theme_ipsum_rc() + 
-  facet_wrap(~trt, ncol = 1) + 
+  facet_grid(trt~ .) + 
   scale_colour_ipsum() + 
   scale_fill_ipsum() + 
   theme(legend.title = element_blank()) + 
@@ -66,12 +66,12 @@ resmods %>%
 
 ### Raw data
 
-```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '50%'}
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
 p <- ggplot(alldis, aes(x = factor(week), y = total, colour = species, fill = species)) + 
   geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
   geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
   theme_ipsum_rc() + 
-  facet_wrap(~trt, ncol = 1) + 
+  facet_grid(trt~ .) + 
   scale_colour_ipsum() + 
   scale_fill_ipsum() + 
   theme(legend.title = element_blank()) + 
