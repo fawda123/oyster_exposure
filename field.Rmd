@@ -33,7 +33,6 @@ datprc <- dat %>%
     lmmod = map(data, ~aov(val ~ Exposure * Station, data = .x)),
     phmod = map(lmmod, TukeyHSD),
     ltmod = map(phmod, function(x){
-
       modhsd <- x %>% 
         .$`Exposure:Station` %>% 
         data.frame

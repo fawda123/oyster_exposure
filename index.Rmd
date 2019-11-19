@@ -1,0 +1,60 @@
+---
+output: 
+  html_document:
+    code_folding: hide
+    css: styles.css
+---
+  
+# Evaluation of Oyster exposure experiments {.tabset}
+  
+```{r setup, message = F, warning = F, results = 'hide'}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, fig.path = 'figs/', dev.args = list(family = 'serif'))
+
+library(tidyverse)
+library(patchwork)
+library(ggbeeswarm)
+library(psycho)
+library(lmerTest)
+library(hrbrthemes)
+
+source('R/funcs.R')
+
+data(allres)
+data(resmods)
+```
+
+## Respiration {.tabset .tabset-pills}
+
+### Raw data
+
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '50%'}
+
+p <- ggplot(allres, aes(x = factor(week), y = resp, colour = species, group = species)) + 
+  geom_jitter(size = 2, alpha = 0.6, width = 0.2) + 
+  theme_ipsum_rc() + 
+  facet_wrap(~trt, ncol = 1) + 
+  scale_colour_ipsum() + 
+  theme(legend.title = element_blank()) + 
+  labs(x = 'Exposure week', y = 'Respiration (umol/hr/g)')
+
+p
+```
+
+### Models
+
+#### Olympic oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+resmods %>% 
+  filter(species == 'Olympia') %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+resmods %>% 
+  filter(species == 'Pacific') %>% 
+  pull(plomod)
+```
+
