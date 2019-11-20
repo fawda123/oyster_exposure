@@ -46,7 +46,7 @@ p
 
 ### Models
 
-#### Olympic oyster
+#### Olympia oyster
 
 ```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
 resmods %>% 
@@ -62,12 +62,16 @@ resmods %>%
   pull(plomod)
 ```
 
-## Dissolution {.tabset .tabset-pills}
+## Dissolution score {.tabset .tabset-pills}
 
 ### Raw data
 
 ```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
-p <- ggplot(alldis, aes(x = factor(week), y = total, colour = species, fill = species)) + 
+yvar <- 'Dissolution score (0-3)'
+toplo <- alldis %>% 
+  filter(var %in% yvar)
+
+p <- ggplot(toplo, aes(x = factor(week), y = val, colour = species, fill = species)) + 
   geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
   geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
   theme_ipsum_rc() + 
@@ -75,18 +79,19 @@ p <- ggplot(alldis, aes(x = factor(week), y = total, colour = species, fill = sp
   scale_colour_ipsum() + 
   scale_fill_ipsum() + 
   theme(legend.title = element_blank()) + 
-  labs(x = 'Exposure week', y = 'Total dissolution types observed')
+  labs(x = 'Exposure week', y = yvar)
 
 p
 ```
 
 ### Models 
 
-#### Olympic oyster
+#### Olympia oyster
 
 ```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
 dismods %>% 
   filter(species == 'Olympia') %>% 
+  filter(var %in% yvar) %>% 
   pull(plomod)
 ```
 
@@ -95,5 +100,132 @@ dismods %>%
 ```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
 dismods %>% 
   filter(species == 'Pacific') %>% 
+  filter(var %in% yvar) %>% 
+  pull(plomod)
+```
+
+## Number of folds {.tabset .tabset-pills}
+
+### Raw data
+
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
+yvar <- 'Number of folds'
+toplo <- alldis %>% 
+  filter(var %in% yvar)
+
+p <- ggplot(toplo, aes(x = factor(week), y = val, colour = species, fill = species)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
+  geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
+  theme_ipsum_rc() + 
+  facet_grid(trt~ .) + 
+  scale_colour_ipsum() + 
+  scale_fill_ipsum() + 
+  theme(legend.title = element_blank()) + 
+  labs(x = 'Exposure week', y = yvar)
+
+p
+```
+
+### Models 
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dismods %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var %in% yvar) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dismods %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var %in% yvar) %>% 
+  pull(plomod)
+```
+
+## Number of irregularities {.tabset .tabset-pills}
+
+### Raw data
+
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
+yvar <- 'Number of irregularities'
+toplo <- alldis %>% 
+  filter(var %in% yvar)
+
+p <- ggplot(toplo, aes(x = factor(week), y = val, colour = species, fill = species)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
+  geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
+  theme_ipsum_rc() + 
+  facet_grid(trt~ .) + 
+  scale_colour_ipsum() + 
+  scale_fill_ipsum() + 
+  theme(legend.title = element_blank()) + 
+  labs(x = 'Exposure week', y = yvar)
+
+p
+```
+
+### Models 
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dismods %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var %in% yvar) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dismods %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var %in% yvar) %>% 
+  pull(plomod)
+```
+
+## Total dissolution observations {.tabset .tabset-pills}
+
+### Raw data
+
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
+yvar <- 'Total observations'
+toplo <- alldis %>% 
+  filter(var %in% yvar)
+
+p <- ggplot(toplo, aes(x = factor(week), y = val, colour = species, fill = species)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
+  geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
+  theme_ipsum_rc() + 
+  facet_grid(trt~ .) + 
+  scale_colour_ipsum() + 
+  scale_fill_ipsum() + 
+  theme(legend.title = element_blank()) + 
+  labs(x = 'Exposure week', y = yvar)
+
+p
+```
+
+### Models 
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dismods %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var %in% yvar) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dismods %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var %in% yvar) %>% 
   pull(plomod)
 ```

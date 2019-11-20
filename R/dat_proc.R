@@ -13,6 +13,12 @@ trts <- tibble(
   lngslab = c( "7.7 Constant", "7.7 Fluctuating 0.2A", "7.7 Fluctuating 0.5A", "8.0 Constant", "8.0 Fluctuating 0.2A")
   )
 
+# consistent dissolution terminology names
+diss <- tibble(
+  shrtlab = c("dissolution_score", "folds", "irreg", "total"),
+  lngslab = c("Dissolution score (0-3)", "Number of folds", "Number of irregularities", "Total observations")
+)
+
 # weight data processing --------------------------------------------------
 
 # none of these files include treatments, just individual ids and week
@@ -92,7 +98,7 @@ resmods <- allres %>%
       
       # labels
       subttl <- paste0('Respiration (umol/hr/g), week ', week, ', ', species, ' oyster')
-      captns <- paste0('Significance where CI does not include zero, alpha = 0.05, total n = ', n)
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
       
       # mean estimate plots
 
@@ -136,15 +142,16 @@ save(resmods, file = here::here('data', 'resmods.RData'), compress = 'xz')
 # there are multiple pictures per individual - dissolution averaged across pictures by jar, treatment, species, week, id
 alldis <- read.csv(here::here("data/raw", "SEM scoring datasheet_MRVERSION.csv"), header = T, stringsAsFactors = F) %>% 
   clean_names %>% 
-  select(week, trt = treatment, jar, id = individual_id, species, dissolution_score, total, picture) %>% 
+  select(week, trt = treatment, jar, id = individual_id, species, dissolution_score, folds = folds_in_shell, irreg = irregular_growth, total, picture) %>% 
+  gather('var', 'val', dissolution_score, folds, irreg, total) %>% 
   mutate(
     trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab), 
+    var = factor(var, levels = diss$shrtlab, labels = diss$lngslab),
     jar = factor(jar)
   ) %>% 
-  group_by(week, trt, jar, id, species) %>% 
+  group_by(week, trt, jar, id, species, var) %>% 
   summarise(
-    total = mean(total, na.rm = T),
-    dissolution_score = mean(dissolution_score, na.rm = T)
+    val = mean(val, na.rm = T)
   ) %>% 
   ungroup %>% 
   filter(week != 0)
@@ -157,17 +164,17 @@ data(alldis)
 
 # fit separate mixed models by species, week, jar as random effect
 dismods <- alldis %>%
-  group_by(week, species) %>% 
+  group_by(week, species, var) %>% 
   nest %>% 
   mutate(
     mixmod = map(data, function(x){
       
-      lmerTest::lmer(total ~ trt + (1|jar), data = x)
+      lmerTest::lmer(val ~ trt + (1|jar), data = x)
       
     }),
     anomod = map(mixmod, anova), 
     summod = map(mixmod, analyze),
-    plomod = pmap(list(week, species, mixmod), function(week, species, mixmod){
+    plomod = pmap(list(week, species, var, mixmod), function(week, species, var, mixmod){
       
       # estimates
       mnsval <- get_means(mixmod, 'trt')
@@ -181,8 +188,8 @@ dismods <- alldis %>%
       n <- mixmod@frame %>% nrow
       
       # labels
-      subttl <- paste0('Respiration (umol/hr/g), week ', week, ', ', species, ' oyster')
-      captns <- paste0('Significance where CI does not include zero, alpha = 0.05, total n = ', n)
+      subttl <- paste0(var, ', week ', week, ', ', species, ' oyster')
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
       
       # mean esimate plots
       p1 <- ggplot(mnsval, aes(x = trt, y = Mean)) + 
