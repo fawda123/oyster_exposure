@@ -137,6 +137,69 @@ resmods <- allres %>%
 
 save(resmods, file = here::here('data', 'resmods.RData'), compress = 'xz')
 
+# respiration models with week ----------------------------------------------
+
+data(allres)
+
+# treatment colors
+cls <- RColorBrewer::brewer.pal(6, 'BrBG')
+cls <- c(cls[1:3], cls[c(6, 4)])
+
+# fit separate mixed models by species, jar as random effect
+reswksmods <- allres %>%
+  gather('var', 'val', resp) %>% 
+  group_by(species) %>% 
+  nest %>% 
+  mutate(
+    mixmod = map(data, function(x){
+      
+      tomod <- x %>% 
+        mutate(
+          week = factor(week), 
+          jar = fct_drop(jar)
+        )
+      
+      lmerTest::lmer(val ~ trt * week + (1|jar), data = tomod)
+      
+    }),
+    anomod = map(mixmod, anova), 
+    summod = map(mixmod, analyze),
+    plomod = pmap(list(species, mixmod), function(species, mixmod){
+      
+      
+      # estimates
+      mnsval <- get_means(mixmod, 'trt * week')
+      
+      # sample size
+      n <- mixmod@frame %>% nrow
+      
+      # labels
+      subttl <- paste0('Respiration (umol/hr/g), ', species, ' oyster')
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      
+      # mean esimate plots
+      p1 <- ggplot(mnsval, aes(x = week, y = Mean, group = trt, colour = trt, fill = trt)) + 
+        geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
+        geom_line(position = position_dodge(0.3)) + 
+        geom_point(size = 3, position = position_dodge(0.3), pch = 21, colour = 'black') + 
+        labs(x = 'Exposure week', y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl, caption = captns) + 
+        scale_colour_manual(values = cls) + 
+        scale_fill_manual(values = cls) + 
+        theme_ipsum() + 
+        theme(
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), 
+          legend.title = element_blank()
+        )
+      
+      p1
+      
+      
+    })
+  )
+
+save(reswksmods, file = here::here('data', 'reswksmods.RData'), compress = 'xz')
+
 # dissolution data --------------------------------------------------------
 
 # there are multiple pictures per individual - dissolution averaged across pictures by jar, treatment, species, week, id
@@ -227,4 +290,64 @@ dismods <- alldis %>%
   )
 
 save(dismods, file = here::here('data', 'dismods.RData'), compress = 'xz')
+
+
+# dissolution models with week --------------------------------------------
+
+data(alldis)
+
+# treatment colors
+cls <- RColorBrewer::brewer.pal(6, 'BrBG')
+cls <- c(cls[1:3], cls[c(6, 4)])
+
+# fit separate mixed models by species, week, jar as random effect
+diswksmods <- alldis %>%
+  group_by(species, var) %>% 
+  nest %>% 
+  mutate(
+    mixmod = map(data, function(x){
+
+      tomod <- x %>% 
+        mutate(
+          week = factor(week), 
+          jar = fct_drop(jar)
+        )
+      
+      lmerTest::lmer(val ~ trt * week + (1|jar), data = tomod)
+      
+    }),
+    anomod = map(mixmod, anova), 
+    summod = map(mixmod, analyze),
+    plomod = pmap(list(species, var, mixmod), function(species, var, mixmod){
+
+      # estimates
+      mnsval <- get_means(mixmod, 'trt * week')
+
+      # sample size
+      n <- mixmod@frame %>% nrow
+      
+      # labels
+      subttl <- paste0(var, ', ', species, ' oyster')
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      
+      # mean esimate plots
+      p1 <- ggplot(mnsval, aes(x = week, y = Mean, group = trt, colour = trt, fill = trt)) + 
+        geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
+        geom_line(position = position_dodge(0.3)) + 
+        geom_point(size = 3, position = position_dodge(0.3), pch = 21, colour = 'black') + 
+        labs(x = 'Exposure week', y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl, caption = captns) + 
+        scale_colour_manual(values = cls) + 
+        scale_fill_manual(values = cls) + 
+        theme_ipsum() + 
+        theme(
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), 
+          legend.title = element_blank()
+        )
+     
+    })
+  )
+
+save(diswksmods, file = here::here('data', 'diswksmods.RData'), compress = 'xz')
+
 
