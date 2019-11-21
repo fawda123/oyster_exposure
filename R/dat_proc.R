@@ -85,6 +85,10 @@ alldis <- read.csv(here::here("data/raw", "SEM scoring datasheet_MRVERSION.csv")
   ungroup %>% 
   filter(week != 0)
 
+# ##
+# # ingestion data
+# alling <- read.csv(here::here('data/raw', 'Ingestionrate_Rfile.csv'), stringsAsFactors = F)
+
 ##
 # combine all exposure data
 allexp <- bind_rows(allres, alllen, alldis, allwts) %>% 
@@ -223,12 +227,41 @@ wtmods <- allexp %>%
       return(out)
       
     }),
+    mixmodnoint = pmap(list(var, data), function(var, data){
+      
+      tomod <- data %>% 
+        mutate(
+          week = factor(week), 
+          jar = fct_drop(jar), 
+          trt = fct_drop(trt)
+        )
+      
+      # no replicate jars by treatment for whole weight
+      if(var == 'Whole weight (g)')
+        out <- glm(val ~ trt + week, data = tomod)
+      
+      if(var != 'Whole weight (g)')
+        out <- lmerTest::lmer(val ~ trt + week + (1|jar), data = tomod)
+      
+      return(out)
+      
+    }),
     anomod = map(mixmod, function(x){
       
       # if(inherits(x, 'glm'))
       #   out <- summary(x)$coefficients
       # if(inherits(x, 'lmerModLmerTest'))
         out <- anova(x)
+      
+      return(out)
+      
+    }), 
+    anomodnoint = map(mixmodnoint, function(x){
+      
+      # if(inherits(x, 'glm'))
+      #   out <- summary(x)$coefficients
+      # if(inherits(x, 'lmerModLmerTest'))
+      out <- anova(x)
       
       return(out)
       
