@@ -15,8 +15,8 @@ trts <- tibble(
 
 # consistent response variable terminology names
 rsps <- tibble(
-  shrtlab = c("dissolution_score", "folds", "irreg", "length_cm", "resp", "total", "width_cm"),
-  lngslab = c("Dissolution score (0-3)", "Number of folds", "Number of irregularities", "Length (cm)", "Respiration (umol/hr/g)", "Total observations", "Width (cm)")
+  shrtlab = c("dissolution_score", "folds", "irreg", "length_cm", "resp", "shell_weight", "tissue_weight", "total", "whole_organism_weight", "width_cm"),
+  lngslab = c("Dissolution score (0-3)", "Number of folds", "Number of irregularities", "Length (cm)", "Respiration (umol/hr/g)", "Shell weight (g)", "Tissue weight (g)", "Total observations",  "Whole weight (g)", "Width (cm)")
 )
 
 # data processing to tidy -------------------------------------------------
@@ -50,6 +50,28 @@ alllen <- read.csv(here::here('data/raw', 'oysterdata-combined-no blank ids.csv'
   gather('var', 'val', length_cm, width_cm)
 
 ##
+# weight data
+
+# treatment by jar info (each jar is unique to a week) 
+trtinfo <- read.csv(here::here('data/raw', 'oysterdata-combined-no blank ids.csv'), stringsAsFactors = F) %>% 
+  rename(trt = treatment) %>% 
+  select(trt, jar) %>% 
+  unique
+
+allwts <- read.csv(here::here('data/raw', 'Weight Data_all weeks_Rfile.csv'), stringsAsFactors = F) %>% 
+  clean_names() %>% 
+  filter(week != 0) %>% 
+  filter(species != '') %>% 
+  mutate(species = gsub('\\s*$', '', species)) %>% 
+  rename(
+    id = individual_id
+  ) %>%
+  left_join(trtinfo, by = c('jar')) %>% 
+  select(week, trt, jar, id, species, whole_organism_weight, shell_weight, tissue_weight) %>% 
+  gather('var', 'val', whole_organism_weight, shell_weight, tissue_weight) %>% 
+  na.omit
+
+##
 # dissolution data
 # there are multiple pictures per individual - dissolution averaged across pictures by jar, treatment, species, week, id
 alldis <- read.csv(here::here("data/raw", "SEM scoring datasheet_MRVERSION.csv"), header = T, stringsAsFactors = F) %>% 
@@ -65,7 +87,7 @@ alldis <- read.csv(here::here("data/raw", "SEM scoring datasheet_MRVERSION.csv")
 
 ##
 # combine all exposure data
-allexp <- bind_rows(allres, alllen, alldis) %>% 
+allexp <- bind_rows(allres, alllen, alldis, allwts) %>% 
   mutate(
     trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab), 
     jar = factor(jar),
@@ -83,18 +105,34 @@ bymods <- allexp %>%
   group_by(week, species, var) %>% 
   nest %>% 
   mutate(
-    mixmod = map(data, function(x){
+    mixmod = pmap(list(var, data), function(var, data){
       
-      tomod <- x %>%
+      tomod <- data %>%
         mutate(
           trt = fct_drop(trt),
           jar = fct_drop(jar)
         )
         
-      lmerTest::lmer(val ~ trt + (1|jar), data = tomod)
+      # no replicate jars by treatment for whole weight
+      if(var == 'Whole weight (g)')
+        out <- glm(val ~ trt, data = tomod)
+      
+      if(var != 'Whole weight (g)')
+        out <- lmerTest::lmer(val ~ trt + (1|jar), data = tomod)
+      
+      return(out)
       
     }),
-    anomod = map(mixmod, anova), 
+    anomod = map(mixmod, function(x){
+      
+      # if(inherits(x, 'glm'))
+      #   out <- summary(x)$coefficients
+      # if(inherits(x, 'lmerModLmerTest'))
+        out <- anova(x)
+      
+      return(out)
+      
+    }), 
     # summod = map(mixmod, analyze),
     plomod = pmap(list(week, species, var, mixmod), function(week, species, var, mixmod){
       
@@ -105,9 +143,12 @@ bymods <- allexp %>%
           sig = ifelse(p < 0.05, 'sig', 'notsig'),
           sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'significant'))
         )
-      
+
       # sample size
-      n <- mixmod@frame %>% nrow
+      if(inherits(mixmod, 'glm'))
+        n <- mixmod$model %>% nrow
+      if(inherits(mixmod, 'lmerModLmerTest'))
+        n <- mixmod@frame %>% nrow
       
       # labels
       subttl <- paste0(var, ', week ', week, ', ', species, ' oyster')
@@ -163,19 +204,35 @@ wtmods <- allexp %>%
   group_by(species, var) %>% 
   nest %>% 
   mutate(
-    mixmod = map(data, function(x){
+    mixmod = pmap(list(var, data), function(var, data){
 
-      tomod <- x %>% 
+      tomod <- data %>% 
         mutate(
           week = factor(week), 
           jar = fct_drop(jar), 
           trt = fct_drop(trt)
         )
       
-      lmerTest::lmer(val ~ trt * week + (1|jar), data = tomod)
+      # no replicate jars by treatment for whole weight
+      if(var == 'Whole weight (g)')
+        out <- glm(val ~ trt * week, data = tomod)
+      
+      if(var != 'Whole weight (g)')
+        out <- lmerTest::lmer(val ~ trt * week + (1|jar), data = tomod)
+      
+      return(out)
       
     }),
-    anomod = map(mixmod, anova), 
+    anomod = map(mixmod, function(x){
+      
+      # if(inherits(x, 'glm'))
+      #   out <- summary(x)$coefficients
+      # if(inherits(x, 'lmerModLmerTest'))
+        out <- anova(x)
+      
+      return(out)
+      
+    }), 
     # summod = map(mixmod, analyze),
     plomod = pmap(list(species, var, mixmod), function(species, var, mixmod){
 
@@ -183,7 +240,10 @@ wtmods <- allexp %>%
       mnsval <- get_means(mixmod, 'trt * week')
 
       # sample size
-      n <- mixmod@frame %>% nrow
+      if(inherits(mixmod, 'glm'))
+        n <- mixmod$model %>% nrow
+      if(inherits(mixmod, 'lmerModLmerTest'))
+        n <- mixmod@frame %>% nrow
       
       # labels
       subttl <- paste0(var, ', ', species, ' oyster')
