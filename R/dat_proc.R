@@ -15,8 +15,8 @@ trts <- tibble(
 
 # consistent response variable terminology names
 rsps <- tibble(
-  shrtlab = c("dissolution_score", "folds", "irreg", "length_cm", "resp", "shell_weight", "tissue_weight", "total", "whole_organism_weight", "width_cm"),
-  lngslab = c("Dissolution score (0-3)", "Number of folds", "Number of irregularities", "Length (cm)", "Respiration (umol/hr/g)", "Shell weight (g)", "Tissue weight (g)", "Total observations",  "Whole weight (g)", "Width (cm)")
+  shrtlab = c("delt_length", "delt_width", "dissolution_score", "final_length", "final_width", "folds", "irreg", "length_cm", "resp", "shell_weight", "tissue_weight", "total", "whole_organism_weight", "width_cm"),
+  lngslab = c("Delta length (cm)", "Delta width (cm)", "Dissolution score (0-3)", "Final length (cm)", "Final width (cm)", "Number of folds", "Number of irregularities", "Length (cm)", "Respiration (umol/hr/g)", "Shell weight (g)", "Tissue weight (g)", "Total observations",  "Whole weight (g)", "Width (cm)")
 )
 
 # data processing to tidy -------------------------------------------------
@@ -34,26 +34,27 @@ allres <- read.csv(here::here("data/raw", "Respiration_oyster_alldata.csv"), hea
   ) %>% 
   gather('var', 'val', resp)
 
-# ##
-# # length data
-# # some week have initial/final measurements, initial measurements span all four weeks
-# 
-# alllen <- read.csv(here::here('data/raw', 'oysterdata-combined-no blank ids.csv'), stringsAsFactors = F) %>% 
-#   clean_names() %>% 
-#   rename(
-#     id = individual_id,
-#     trt = treatment
-#   ) %>% 
-#   filter(initial_final == 'initial') %>% 
-#   filter(week != 0) %>%
-#   select(week, trt, jar, id, species, length_cm, width_cm) %>% 
-#   gather('var', 'val', length_cm, width_cm)
+##
+# length data
+
+# initial column measured a few days prior to week zero
+alllen <- read.csv(here::here('data/raw', 'length_data.csv'), stringsAsFactors = F) %>% 
+  clean_names() %>% 
+  select(week, trt = treatment, jar, id = individual_id, species, everything()) %>% 
+  mutate(
+    delt_length = final_length - initial_length, 
+    delt_width = final_width - initial_width
+  ) %>% 
+  gather('var', 'val', -week, -trt, -jar, -id, -species) %>% 
+  filter(week != 6) %>% 
+  filter(!(week %in% 0 & var %in% c('delt_length', 'delt_width'))) %>% 
+  filter(!var %in% c('initial_length', 'initial_width'))
 
 ##
 # weight data
 
 # treatment by jar info (each jar is unique to a week) 
-trtinfo <- read.csv(here::here('data/raw', 'oysterdata-combined-no blank ids.csv'), stringsAsFactors = F) %>% 
+trtinfo <- read.csv(here::here('data/raw', 'length_data.csv'), stringsAsFactors = F) %>% 
   rename(trt = treatment) %>% 
   select(trt, jar) %>% 
   unique
@@ -91,7 +92,7 @@ alldis <- read.csv(here::here("data/raw", "SEM scoring datasheet_MRVERSION.csv")
 
 ##
 # combine all exposure data
-allexp <- bind_rows(allres, alldis, allwts) %>% 
+allexp <- bind_rows(allres, alllen, alldis, allwts) %>% 
   mutate(
     trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab), 
     jar = factor(jar),
