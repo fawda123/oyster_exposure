@@ -1,0 +1,948 @@
+---
+output: 
+  html_document:
+    code_folding: hide
+css: styles.css
+---
+  
+# Evaluation of oyster exposure experiments, length analyses {.tabset}
+  
+```{r setup, message = F, warning = F, results = 'hide'}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, fig.path = 'figs/', dev.args = list(family = 'serif'))
+
+library(tidyverse)
+library(patchwork)
+library(ggbeeswarm)
+library(psycho)
+library(lmerTest)
+library(hrbrthemes)
+library(kableExtra)
+library(shiny)
+library(janitor)
+
+source('R/funcs.R')
+
+data(alllen)
+data(bymodslen)
+data(wtmodslen)
+```
+
+## Size class divisions
+
+```{r fig.height = 6, fig.width = 7, out.width = "80%", fig.align = "center"}
+# initial column measured a few days prior to week zero
+toplo<- read.csv(here::here('data/raw', 'length_data.csv'), stringsAsFactors = F) %>% 
+  clean_names() %>% 
+  select(week, trt = treatment, jar, id = individual_id, species, everything()) %>% 
+  group_by(species) %>% 
+  filter(!is.na(initial_length)) %>% 
+  mutate(
+    median = median(initial_length, na.rm = T), 
+    sizecl = case_when(
+      initial_length < median ~ 'small', 
+      initial_length >= median ~ 'large'
+    )
+  ) %>% 
+  select(week, trt, jar, id, species, initial_length, sizecl, median) %>%
+  na.omit
+
+p <- ggplot(toplo, aes(x = initial_length, fill = sizecl)) +
+  geom_histogram() +
+  facet_wrap(~species, ncol = 1) +
+  geom_vline(aes(xintercept = median)) +
+  theme_ipsum_rc() +
+  scale_colour_ipsum() +
+  scale_fill_ipsum('Size class') +
+  labs(y = 'Count', x = 'Initial length (cm), week zero', caption = 'Size classes set by species median')
+
+return(p)
+```
+
+## Final length, small {.tabset .tabset-pills}
+
+### Raw data
+
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
+yvar <- 'Final length (cm)'
+szvar <- 'small'
+
+toplo <- alllen %>% 
+  filter(var %in% yvar) %>% 
+  filter(sizecl %in% szvar)
+
+p <- ggplot(toplo, aes(x = factor(week), y = val, colour = species, fill = species)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
+  geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
+  theme_ipsum_rc() + 
+  facet_grid(trt~ .) + 
+  scale_colour_ipsum() + 
+  scale_fill_ipsum() + 
+  theme(legend.title = element_blank()) + 
+  labs(x = 'Exposure week', y = yvar, caption = paste(szvar, 'size class'))
+
+p
+```
+
+### Models by week
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+### Models with week
+
+#### Olympia oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+
+## Final length, large {.tabset .tabset-pills}
+
+### Raw data
+
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
+yvar <- 'Final length (cm)'
+szvar <- 'large'
+
+toplo <- alllen %>% 
+  filter(var %in% yvar) %>% 
+  filter(sizecl %in% szvar)
+
+p <- ggplot(toplo, aes(x = factor(week), y = val, colour = species, fill = species)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
+  geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
+  theme_ipsum_rc() + 
+  facet_grid(trt~ .) + 
+  scale_colour_ipsum() + 
+  scale_fill_ipsum() + 
+  theme(legend.title = element_blank()) + 
+  labs(x = 'Exposure week', y = yvar, caption = paste(szvar, 'size class'))
+
+p
+```
+
+### Models by week
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+### Models with week
+
+#### Olympia oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+
+
+
+
+## Final width, small {.tabset .tabset-pills}
+
+### Raw data
+
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
+yvar <- 'Final width (cm)'
+szvar <- 'small'
+
+toplo <- alllen %>% 
+  filter(var %in% yvar) %>% 
+  filter(sizecl %in% szvar)
+
+p <- ggplot(toplo, aes(x = factor(week), y = val, colour = species, fill = species)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
+  geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
+  theme_ipsum_rc() + 
+  facet_grid(trt~ .) + 
+  scale_colour_ipsum() + 
+  scale_fill_ipsum() + 
+  theme(legend.title = element_blank()) + 
+  labs(x = 'Exposure week', y = yvar, caption = paste(szvar, 'size class'))
+
+p
+```
+
+### Models by week
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+### Models with week
+
+#### Olympia oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+
+
+## Final width, large {.tabset .tabset-pills}
+
+### Raw data
+
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
+yvar <- 'Final width (cm)'
+szvar <- 'large'
+
+toplo <- alllen %>% 
+  filter(var %in% yvar) %>% 
+  filter(sizecl %in% szvar)
+
+p <- ggplot(toplo, aes(x = factor(week), y = val, colour = species, fill = species)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
+  geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
+  theme_ipsum_rc() + 
+  facet_grid(trt~ .) + 
+  scale_colour_ipsum() + 
+  scale_fill_ipsum() + 
+  theme(legend.title = element_blank()) + 
+  labs(x = 'Exposure week', y = yvar, caption = paste(szvar, 'size class'))
+
+p
+```
+
+### Models by week
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+### Models with week
+
+#### Olympia oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+
+
+## Delta length, small {.tabset .tabset-pills}
+
+### Raw data
+
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
+yvar <- 'Delta length (cm)'
+szvar <- 'small'
+
+toplo <- alllen %>% 
+  filter(var %in% yvar) %>% 
+  filter(sizecl %in% szvar)
+
+p <- ggplot(toplo, aes(x = factor(week), y = val, colour = species, fill = species)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
+  geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
+  theme_ipsum_rc() + 
+  facet_grid(trt~ .) + 
+  scale_colour_ipsum() + 
+  scale_fill_ipsum() + 
+  theme(legend.title = element_blank()) + 
+  labs(x = 'Exposure week', y = yvar, caption = paste(szvar, 'size class'))
+
+p
+```
+
+### Models by week
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+### Models with week
+
+#### Olympia oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+
+
+## Delta length, large {.tabset .tabset-pills}
+
+### Raw data
+
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
+yvar <- 'Delta length (cm)'
+szvar <- 'large'
+
+toplo <- alllen %>% 
+  filter(var %in% yvar) %>% 
+  filter(sizecl %in% szvar)
+
+p <- ggplot(toplo, aes(x = factor(week), y = val, colour = species, fill = species)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
+  geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
+  theme_ipsum_rc() + 
+  facet_grid(trt~ .) + 
+  scale_colour_ipsum() + 
+  scale_fill_ipsum() + 
+  theme(legend.title = element_blank()) + 
+  labs(x = 'Exposure week', y = yvar, caption = paste(szvar, 'size class'))
+
+p
+```
+
+### Models by week
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+### Models with week
+
+#### Olympia oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+
+
+## Delta width, small {.tabset .tabset-pills}
+
+### Raw data
+
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
+yvar <- 'Delta width (cm)'
+szvar <- 'small'
+
+toplo <- alllen %>% 
+  filter(var %in% yvar) %>% 
+  filter(sizecl %in% szvar)
+
+p <- ggplot(toplo, aes(x = factor(week), y = val, colour = species, fill = species)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
+  geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
+  theme_ipsum_rc() + 
+  facet_grid(trt~ .) + 
+  scale_colour_ipsum() + 
+  scale_fill_ipsum() + 
+  theme(legend.title = element_blank()) + 
+  labs(x = 'Exposure week', y = yvar, caption = paste(szvar, 'size class'))
+
+p
+```
+
+### Models by week
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+### Models with week
+
+#### Olympia oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+
+
+## Delta width, large {.tabset .tabset-pills}
+
+### Raw data
+
+```{r, fig.height= 8, fig.width = 5, fig.align = 'center', out.width = '65%'}
+yvar <- 'Delta width (cm)'
+szvar <- 'large'
+
+toplo <- alllen %>% 
+  filter(var %in% yvar) %>% 
+  filter(sizecl %in% szvar)
+
+p <- ggplot(toplo, aes(x = factor(week), y = val, colour = species, fill = species)) + 
+  geom_boxplot(outlier.shape = NA, alpha = 0.1) + 
+  geom_point(aes(group = species), position = position_jitterdodge(jitter.width = 0.1), size = 2, alpha = 0.6) + 
+  theme_ipsum_rc() + 
+  facet_grid(trt~ .) + 
+  scale_colour_ipsum() + 
+  scale_fill_ipsum() + 
+  theme(legend.title = element_blank()) + 
+  labs(x = 'Exposure week', y = yvar, caption = paste(szvar, 'size class'))
+
+p
+```
+
+### Models by week
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+bymodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar) %>% 
+  pull(plomod)
+```
+
+### Models with week
+
+#### Olympia oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Olympia') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r}
+dat <- wtmodslen %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == yvar) %>% 
+  filter(sizecl == szvar)
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week + treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  filter(species == 'Pacific') %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = paste0(yvar, ' vs week x treatment')) %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+
