@@ -34,20 +34,20 @@ allres <- read.csv(here::here("data/raw", "Respiration_oyster_alldata.csv"), hea
   ) %>% 
   gather('var', 'val', resp)
 
-##
-# length data
-# some week have initial/final measurements, initial measurements span all four weeks
-
-alllen <- read.csv(here::here('data/raw', 'oysterdata-combined-no blank ids.csv'), stringsAsFactors = F) %>% 
-  clean_names() %>% 
-  rename(
-    id = individual_id,
-    trt = treatment
-  ) %>% 
-  filter(initial_final == 'initial') %>% 
-  filter(week != 0) %>%
-  select(week, trt, jar, id, species, length_cm, width_cm) %>% 
-  gather('var', 'val', length_cm, width_cm)
+# ##
+# # length data
+# # some week have initial/final measurements, initial measurements span all four weeks
+# 
+# alllen <- read.csv(here::here('data/raw', 'oysterdata-combined-no blank ids.csv'), stringsAsFactors = F) %>% 
+#   clean_names() %>% 
+#   rename(
+#     id = individual_id,
+#     trt = treatment
+#   ) %>% 
+#   filter(initial_final == 'initial') %>% 
+#   filter(week != 0) %>%
+#   select(week, trt, jar, id, species, length_cm, width_cm) %>% 
+#   gather('var', 'val', length_cm, width_cm)
 
 ##
 # weight data
@@ -91,7 +91,7 @@ alldis <- read.csv(here::here("data/raw", "SEM scoring datasheet_MRVERSION.csv")
 
 ##
 # combine all exposure data
-allexp <- bind_rows(allres, alllen, alldis, allwts) %>% 
+allexp <- bind_rows(allres, alldis, allwts) %>% 
   mutate(
     trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab), 
     jar = factor(jar),
