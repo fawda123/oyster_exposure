@@ -38,10 +38,18 @@ allres <- read.csv(here::here("data/raw", "Respiration_oyster_alldata.csv"), hea
 # length data
 
 # initial column measured a few days prior to week zero
-alllen <- read.csv(here::here('data/raw', 'length_data.csv'), stringsAsFactors = F) %>% 
+alllen <- read_excel(here::here('data/raw/Length_kelp_4_3_2020.xlsx')) %>% 
   clean_names() %>% 
-  select(week, trt = treatment, jar, id = individual_id, species, everything()) %>% 
+  select(week, trt = treatment, jar, id = individual_id, species, final_length = length_cm_final, initial_length = length_cm_initial, final_width = width_cm_final, initial_width = width_cm_initial) %>% 
   mutate(
+    final_length = case_when(
+      week == 0 & is.na(final_length) ~ initial_length, 
+      T ~ final_length
+    ),
+    final_width = case_when(
+      week == 0 & is.na(final_width) ~ initial_width,
+      T ~ final_width
+    ),
     delt_length = final_length - initial_length, 
     delt_width = final_width - initial_width, 
     rate_length = case_when(
@@ -62,7 +70,8 @@ alllen <- read.csv(here::here('data/raw', 'length_data.csv'), stringsAsFactors =
 # weight data
 
 # treatment by jar info (each jar is unique to a week) 
-trtinfo <- read.csv(here::here('data/raw', 'length_data.csv'), stringsAsFactors = F) %>% 
+trtinfo <- read_excel(here::here('data/raw/Length_kelp_4_3_2020.xlsx')) %>% 
+  clean_names() %>% 
   rename(trt = treatment) %>% 
   select(trt, jar) %>% 
   unique
@@ -125,7 +134,7 @@ bymods <- allexp %>%
           trt = fct_drop(trt),
           jar = fct_drop(jar)
         )
-        
+
       # no replicate jars by treatment for whole weight
       if(var == 'Whole weight (g)')
         out <- glm(val ~ trt, data = tomod)
@@ -322,9 +331,19 @@ rspslen <- tibble(
 )
 
 # initial column measured a few days prior to week zero
-alllen <- read.csv(here::here('data/raw', 'length_data.csv'), stringsAsFactors = F) %>% 
+alllen <- read_excel(here::here('data/raw/Length_kelp_4_3_2020.xlsx')) %>% 
   clean_names() %>% 
-  select(week, trt = treatment, jar, id = individual_id, species, everything()) %>% 
+  select(week, trt = treatment, jar, id = individual_id, species, final_length = length_cm_final, initial_length = length_cm_initial, final_width = width_cm_final, initial_width = width_cm_initial) %>% 
+  mutate(
+    final_length = case_when(
+      week == 0 & is.na(final_length) ~ initial_length, 
+      T ~ final_length
+    ),
+    final_width = case_when(
+      week == 0 & is.na(final_width) ~ initial_width,
+      T ~ final_width
+    )
+  ) %>% 
   group_by(species) %>% 
   filter(!is.na(initial_length)) %>% 
   mutate(
