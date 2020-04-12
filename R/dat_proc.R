@@ -69,22 +69,16 @@ alllen <- read_excel(here::here('data/raw/Length_kelp_4_3_2020.xlsx')) %>%
 ##
 # weight data
 
-# treatment by jar info (each jar is unique to a week) 
-trtinfo <- read_excel(here::here('data/raw/Length_kelp_4_3_2020.xlsx')) %>% 
-  clean_names() %>% 
-  rename(trt = treatment) %>% 
-  select(trt, jar) %>% 
-  unique
-
-allwts <- read.csv(here::here('data/raw', 'Weight Data_all weeks_Rfile.csv'), stringsAsFactors = F) %>% 
+allwts <- read.csv(here::here('data/raw/Weight_with dead but not multiple_Kelp_4_3.csv'), stringsAsFactors = F) %>% 
   clean_names() %>% 
   filter(week != 0) %>% 
   filter(species != '') %>% 
   mutate(species = gsub('\\s*$', '', species)) %>% 
   rename(
-    id = individual_id
+    id = individual_id, 
+    jar = i_jar,
+    trt = treatment
   ) %>%
-  left_join(trtinfo, by = c('jar')) %>% 
   select(week, trt, jar, id, species, whole_organism_weight, shell_weight, tissue_weight) %>% 
   gather('var', 'val', whole_organism_weight, shell_weight, tissue_weight) %>% 
   na.omit
@@ -114,7 +108,8 @@ allexp <- bind_rows(allres, alllen, alldis, allwts) %>%
     trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab), 
     jar = factor(jar),
     var = factor(var, levels = rsps$shrtlab, labels = rsps$lngslab)
-  )
+  ) %>% 
+  arrange(species, var, week)
 
 save(allexp, file = here::here('data', 'allexp.RData'), compress = 'xz')
 
@@ -363,7 +358,8 @@ alllen <- read_excel(here::here('data/raw/Length_kelp_4_3_2020.xlsx')) %>%
     var = factor(var, levels = rspslen$shrtlab, labels = rspslen$lngslab), 
     trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab), 
     jar = factor(jar)
-  )
+  ) %>% 
+  arrange(species, var, week)
 
 save(alllen, file = here('data', 'alllen.RData'), compress = 'xz')
 
