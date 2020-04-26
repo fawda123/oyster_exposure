@@ -1,0 +1,232 @@
+---
+output: 
+  html_document:
+    code_folding: hide
+css: styles.css
+---
+  
+# Oyster exposure experiments, length and weight analyses {.tabset}
+
+```{r setup, message = F, warning = F, results = 'hide'}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, fig.path = 'figs/', dev.args = list(family = 'serif'))
+
+library(tidyverse)
+library(janitor)
+library(readxl)
+library(patchwork)
+source("R/funcs.R")
+
+# consistent treatment terminology names
+trts <- tibble(
+  shrtlab = c("7.7C", "7.7A0.2", "7.7A0.5", "8.0C", "8.0A0.2"),
+  lngslab = c( "7.7 Constant", "7.7 Fluctuating 0.2A", "7.7 Fluctuating 0.5A", "8.0 Constant", "8.0 Fluctuating 0.2A")
+)
+
+# consistent response variable names for weight
+rsps <- tibble(
+  shrtlab = c("final_length", "final_width", "shell_weight", "tissue_weight"),
+  lngslab = c("Final length (cm)", "Final width (cm)", "Shell weight (g)", "Tissue weight (g)")
+)
+
+# length data
+# initial column measured a few days prior to week zero
+alllen <- read_excel(here::here('data/raw/Length_kelp_4_3_2020.xlsx')) %>% 
+  clean_names() %>% 
+  select(week, trt = treatment, jar, id = individual_id, species, final_length = length_cm_final, initial_length = length_cm_initial, final_width = width_cm_final, initial_width = width_cm_initial) %>% 
+  mutate(
+    final_length = case_when(
+      week == 0 & is.na(final_length) ~ initial_length, 
+      T ~ final_length
+    ),
+    final_width = case_when(
+      week == 0 & is.na(final_width) ~ initial_width,
+      T ~ final_width
+    )
+  ) %>% 
+  gather('var', 'val', -week, -trt, -jar, -id, -species) %>% 
+  filter(!var %in% c('initial_length', 'initial_width'))
+
+# weight data
+allwts <- read.csv(here::here('data/raw/Weight_with dead but not multiple_Kelp_4_3.csv'), stringsAsFactors = F) %>% 
+  clean_names() %>% 
+  # filter(week != 0) %>% 
+  filter(species != '') %>% 
+  mutate(species = gsub('\\s*$', '', species)) %>% 
+  rename(
+    id = individual_id, 
+    jar = i_jar,
+    trt = treatment
+  ) %>%
+  select(week, trt, jar, id, species, shell_weight, tissue_weight) %>% 
+  gather('var', 'val', shell_weight, tissue_weight) %>% 
+  na.omit 
+
+alldat <- bind_rows(allwts, alllen) %>% 
+  mutate(
+    trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab), 
+    var = factor(var, levels = rsps$shrtlab, labels = rsps$lngslab)
+  )
+
+# week combinations
+wks <- sort(unique(alldat$week)) %>% 
+  combn(2) %>% 
+  t %>% 
+  data.frame %>% 
+  rename(
+    week1 = X1, 
+    week2 = X2
+  )
+
+grds <- alldat %>% 
+  select(trt, species, var) %>% 
+  unique() %>% 
+  crossing(wks) %>% 
+  mutate(
+    res = purrr::pmap(list(trt, species, var, week1, week2), function(trt, species, var, week1, week2){
+
+      specsel <- species
+      varsel <- var
+      trtsel <- trt
+      
+      tomod <- alldat %>%
+        filter(species %in% specsel) %>%
+        filter(var %in% varsel) %>%
+        filter(trt %in% trtsel)
+
+      val1 <- tomod %>%
+        filter(week == week1) %>%
+        pull(val)
+
+      val2 <- tomod %>%
+        filter(week == week2) %>%
+        pull(val)
+
+      est <- t.test(val1, val2)
+
+      perc <-  as.numeric(100 * diff(est$estimate) / est$estimate[2])
+      pout <- p_ast(est$p.value)
+      out <- data.frame(perc, pout)
+
+      return(out)
+
+    })
+  ) %>% 
+  unnest('res')
+```
+
+## Length
+
+```{r, fig.height = 7, fig.width = 12}
+
+lenvars <- c('Final length (cm)', 'Final width (cm)')
+toplo1 <- alldat %>% 
+  filter(var %in% lenvars) %>% 
+  group_by(week, trt, species, var) %>% 
+  summarise(
+    aveval = mean(val, na.rm = T), 
+    lowval = t.test(val)$conf.int[1],
+    uppval = t.test(val)$conf.int[2]
+  )
+
+p1 <- ggplot(toplo1, aes(x = week, y = aveval)) + 
+  geom_line() + 
+  geom_point(size = 2) + 
+  geom_errorbar(aes(ymax = uppval, ymin = lowval), width = 1) + 
+  facet_grid(trt ~ species + var) +
+  scale_x_continuous(breaks = c(0, 2, 4, 6)) + 
+  theme_bw() + 
+  theme(
+    # panel.background = element_blank(), 
+    strip.background = element_blank(),
+    axis.ticks = element_blank(), 
+    panel.grid.minor = element_blank()
+  ) + 
+  labs(
+    title = 'Average values and 95% confidence intervals across time periods', 
+    subtitle = 'Panels separated by species, treatment, and response measure',
+    y = 'Average (+/- 95% CI)', 
+    x = 'Week'
+  )
+
+toplo2 <- grds %>% 
+  filter(var %in% lenvars)
+
+p2 <- ggplot(toplo2, aes(x = week1, y = week2, fill = perc)) + 
+  geom_tile(color = 'black') + 
+  geom_text(aes(label = pout)) + 
+  scale_x_continuous('Week', expand = c(0, 0), breaks = c(0, 2, 4)) +
+  scale_y_continuous('Week', expand = c(0, 0), breaks = c(2, 4, 6)) +
+  scale_fill_gradient2(low = 'lightgreen', mid = 'white', high = 'lightblue') +
+  # scale_fill_distiller('% diff.', palette = 'Purples', direction = 1) +
+  facet_grid(trt ~ species + var) +
+  theme(
+    panel.background = element_blank(), 
+    strip.background = element_blank(),
+    axis.ticks = element_blank()
+  ) + 
+  labs(
+    title = 'Differences in means between experiment time points', 
+    subtitle = 'Significant differences are indicated by text'
+  )
+
+p1 + p2 + plot_layout(ncol = 2)
+```
+
+## Weight 
+
+```{r, fig.height = 7, fig.width = 12}
+
+wgtvars <- c('Shell weight (g)', 'Tissue weight (g)')
+toplo1 <- alldat %>% 
+  filter(var %in% wgtvars) %>% 
+  group_by(week, trt, species, var) %>% 
+  summarise(
+    aveval = mean(val, na.rm = T), 
+    lowval = t.test(val)$conf.int[1],
+    uppval = t.test(val)$conf.int[2]
+  )
+
+p1 <- ggplot(toplo1, aes(x = week, y = aveval)) + 
+  geom_line() + 
+  geom_point(size = 2) + 
+  geom_errorbar(aes(ymax = uppval, ymin = lowval), width = 1) + 
+  facet_grid(trt ~ species + var) +
+  scale_x_continuous(breaks = c(0, 2, 4, 6)) + 
+  theme_bw() + 
+  theme(
+    # panel.background = element_blank(), 
+    strip.background = element_blank(),
+    axis.ticks = element_blank(), 
+    panel.grid.minor = element_blank()
+  ) + 
+  labs(
+    title = 'Average values and 95% confidence intervals across time periods', 
+    subtitle = 'Panels separated by species, treatment, and response measure',
+    y = 'Average (+/- 95% CI)', 
+    x = 'Week'
+  )
+
+toplo2 <- grds %>% 
+  filter(var %in% wgtvars)
+
+p2 <- ggplot(toplo2, aes(x = week1, y = week2, fill = perc)) + 
+  geom_tile(color = 'black') + 
+  geom_text(aes(label = pout)) + 
+  scale_x_continuous('Week', expand = c(0, 0), breaks = c(0, 2, 4)) +
+  scale_y_continuous('Week', expand = c(0, 0), breaks = c(2, 4, 6)) +
+  # scale_fill_distiller('% diff.', palette = 'Purples', direction = 1) + 
+  scale_fill_gradient2(low = 'lightgreen', mid = 'white', high = 'lightblue') +
+  facet_grid(trt ~ species + var) +
+  theme(
+    panel.background = element_blank(), 
+    strip.background = element_blank(),
+    axis.ticks = element_blank()
+  ) + 
+  labs(
+    title = 'Differences in means between experiment time points', 
+    subtitle = 'Significant differences are indicated by text'
+  )
+
+p1 + p2 + plot_layout(ncol = 2)
+```
+
