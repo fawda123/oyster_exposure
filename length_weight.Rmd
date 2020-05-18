@@ -116,7 +116,7 @@ grds <- alldat %>%
 
 ## Length
 
-```{r, fig.height = 7, fig.width = 12}
+```{r, fig.height = 14, fig.width = 14}
 
 lenvars <- c('Final length (cm)', 'Final width (cm)')
 toplo1 <- alldat %>% 
@@ -168,7 +168,29 @@ p2 <- ggplot(toplo2, aes(x = week1, y = week2, fill = perc)) +
     subtitle = 'Significant differences are indicated by text'
   )
 
-p1 + p2 + plot_layout(ncol = 2)
+toplo3 <- alldat %>% 
+  filter(var %in% lenvars)
+
+p3 <- ggplot(toplo3, aes(x = val)) + 
+  stat_ecdf(aes(colour = trt), size = 1) +
+  facet_grid(week ~ species + var, scales = 'free') +
+  scale_colour_viridis_d() +
+  theme_bw() + 
+  theme(
+    # panel.background = element_blank(), 
+    strip.background = element_blank(),
+    axis.ticks = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    legend.title = element_blank()
+  ) + 
+  labs(
+    title = 'Cumulative distribution plots', 
+    subtitle = 'Panels separated by species, week, and response measure',
+    y = 'Cumulative frequency', 
+    x = 'Size (cm)'
+  )
+
+p1 + p2 + p3 + plot_layout(ncol = 2)
 ```
 
 ## Length across individuals
@@ -566,7 +588,7 @@ p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + plot_layout(ncol = 2)
 
 ## Weight 
 
-```{r, fig.height = 7, fig.width = 12}
+```{r, fig.height = 14, fig.width = 14}
 
 wgtvars <- c('Shell weight (g)', 'Tissue weight (g)')
 toplo1 <- alldat %>% 
@@ -618,5 +640,27 @@ p2 <- ggplot(toplo2, aes(x = week1, y = week2, fill = perc)) +
     subtitle = 'Significant differences are indicated by text'
   )
 
-p1 + p2 + plot_layout(ncol = 2)
+toplo3 <- alldat %>% 
+  filter(var %in% wgtvars) 
+
+p3 <- ggplot(toplo3, aes(x = val)) + 
+  stat_ecdf(aes(colour = trt), size = 1) +
+  facet_grid(week ~ species + var, scales = 'free') +
+  scale_colour_viridis_d() +
+  theme_bw() + 
+  theme(
+    # panel.background = element_blank(), 
+    strip.background = element_blank(),
+    axis.ticks = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    legend.title = element_blank()
+  ) + 
+  labs(
+    title = 'Cumulative distribution plots', 
+    subtitle = 'Panels separated by species, week, and response measure',
+    y = 'Cumulative frequency', 
+    x = 'Weight (g)'
+  )
+
+p1 + p2 + p3 + plot_layout(ncol = 2)
 ```
