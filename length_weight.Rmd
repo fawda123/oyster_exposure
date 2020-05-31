@@ -1254,3 +1254,98 @@ p4 <- ggplot(toplo1, aes(x = tissue_weight, y = shell_weight, colour = trt)) +
 p1 + p2 + p3 + p4 + plot_layout(ncol = 2)
 ```
 
+## Survival 
+
+```{r, fig.height = 7, fig.width = 7}
+toplo1 <- read.csv(here::here('data/raw/Weight_with dead but not multiple_Kelp_4_3.csv'), stringsAsFactors = F) %>% 
+  clean_names() %>% 
+  # filter(week != 0) %>% 
+  filter(species != '') %>% 
+  mutate(species = gsub('\\s*$', '', species)) %>% 
+  rename(
+    id = individual_id, 
+    jar = i_jar,
+    trt = treatment
+  ) %>% 
+  select(week, trt, jar, id, species, dead) %>% 
+  mutate(
+    dead = case_when(
+      dead %in% c('x', 'X') ~ 1, 
+      T ~ 0
+    )
+  ) %>% 
+  group_by(week, trt, species) %>% 
+  summarise(percdead = 100 * sum(dead) / length(dead)) %>%
+  ungroup() %>% 
+  filter(trt != '') %>% 
+  mutate(
+    trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab)
+  )
+
+p1 <- ggplot(toplo1, aes(x = week, y = percdead, fill = trt)) + 
+  geom_bar(stat = 'identity') + 
+  scale_fill_viridis_d() + 
+  facet_grid(trt ~ species) +
+  scale_x_continuous(breaks = c(0, 2, 4, 6)) + 
+  theme_bw() + 
+  theme(
+    # panel.background = element_blank(), 
+    strip.background = element_blank(),
+    axis.ticks = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    legend.title = element_blank()
+  ) + 
+  labs(
+    title = 'Percent dead by week', 
+    subtitle = 'Panels separated by species, treatment',
+    y = '% dead at each time point', 
+    x = 'Week'
+  )
+
+toplo2 <- read.csv(here::here('data/raw/Weight_with dead but not multiple_Kelp_4_3.csv'), stringsAsFactors = F) %>% 
+  clean_names() %>% 
+  # filter(week != 0) %>% 
+  filter(species != '') %>% 
+  mutate(species = gsub('\\s*$', '', species)) %>% 
+  rename(
+    id = individual_id, 
+    jar = i_jar,
+    trt = treatment
+  ) %>% 
+  select(week, trt, jar, id, species, dead) %>% 
+  mutate(
+    dead = case_when(
+      dead %in% c('x', 'X') ~ 1, 
+      T ~ 0
+    )
+  ) %>% 
+  group_by(trt, species) %>% 
+  summarise(percdead = 100 * sum(dead) / length(dead)) %>%
+  ungroup() %>% 
+  filter(trt != '') %>% 
+  mutate(
+    trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab)
+  )
+
+p2 <- ggplot(toplo2, aes(x = trt, y = percdead, fill = trt)) + 
+  geom_bar(stat = 'identity') + 
+  scale_fill_viridis_d() + 
+  facet_grid( ~ species) +
+  theme_bw() + 
+  theme(
+    # panel.background = element_blank(), 
+    strip.background = element_blank(),
+    axis.ticks = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    legend.position = 'none'
+  ) + 
+  labs(
+    title = 'Percent dead across weeks', 
+    subtitle = 'Panels separated by species',
+    y = '% dead', 
+    x = 'Treatment'
+  )
+
+p1 + p2 + plot_layout(ncol = 1, height = c(1, 0.25), guides = 'collect')
+```
+
