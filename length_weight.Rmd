@@ -583,7 +583,64 @@ p10 <- ggplot(toplo4, aes(x = week)) +
     x = 'Week'
   ) 
 
-p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + plot_layout(ncol = 2)
+toplo11 <- read_excel(here::here('data/raw/Length_kelp_4_3_2020.xlsx')) %>% 
+  clean_names() %>% 
+  select(week, trt = treatment, jar, id = individual_id, species, final_length = length_cm_final, 
+         initial_length = length_cm_initial, final_width = width_cm_final, initial_width = width_cm_initial) %>% 
+  mutate(
+    delt_length = final_length - initial_length, 
+    init_length = 0,
+    delt_width = final_width - initial_width, 
+    init_width = 0
+  ) %>% 
+  filter(week != 0) %>% 
+  select(week, trt, jar, id, species, delt_length, init_length, delt_width, init_width) %>% 
+  gather('var', 'val', delt_length, init_length, delt_width, init_width) %>% 
+  separate(var, c('period', 'var')) %>% 
+  group_by(week, trt, jar, id, species, period, var) %>% 
+  summarise(val = mean(val, na.rm = T)) %>% 
+  ungroup %>% 
+  filter(!week == 0) %>% 
+  mutate(
+    week = case_when(
+      period == 'init' ~ 0, 
+      T ~ week
+    )
+  ) %>% 
+  unite('jar_id', jar, id) %>% 
+  filter(week != 0) %>% 
+  mutate(
+    val = case_when(
+      sign(val) %in% c(0, 1) ~ 1, 
+      sign(val) == -1 ~ -1
+    )
+  ) %>% 
+  group_by(week, trt, species, period, var, val) %>% 
+  summarise(cnt = sum(val)) %>% 
+  na.omit() %>% 
+  ungroup %>% 
+  mutate(val = factor(val, levels = c(1, -1), labels = c('positive', 'negative')))
+  
+p11 <- ggplot(toplo11, aes(x = week, y = cnt, fill = factor(val))) + 
+  geom_bar(stat = 'identity') +
+  facet_grid(trt ~ species + var) +
+  scale_x_continuous(breaks = c(2, 4, 6)) + 
+  theme_bw() + 
+  theme(
+    # panel.background = element_blank(), 
+    strip.background = element_blank(),
+    axis.ticks = element_blank(), 
+    panel.grid.minor = element_blank(), 
+    legend.title = element_blank()
+  ) + 
+  labs(
+    title = 'Tracking growth by individuals from time zero', 
+    subtitle = 'Panels separated by species, treatment, and response measure',
+    y = 'Count of individuals with positive or negative growth', 
+    x = 'Week'
+  ) 
+
+p1 + p2 + p11 + plot_spacer() + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + plot_layout(ncol = 2)
 ```
 
 ## Weight 
