@@ -16,6 +16,8 @@ library(readxl)
 library(patchwork)
 source("R/funcs.R")
 
+data(indbymod)
+
 # consistent treatment terminology names
 trts <- tibble(
   shrtlab = c("7.7C", "7.7A0.2", "7.7A0.5", "8.0C", "8.0A0.2"),
@@ -193,7 +195,9 @@ p3 <- ggplot(toplo3, aes(x = val)) +
 p1 + p2 + p3 + plot_layout(ncol = 2)
 ```
 
-## Length across individuals
+## Length across individuals {.tabset .tabset-pills}
+
+### Observed
 
 ```{r, fig.height = 35, fig.width = 12}
 # length data
@@ -642,6 +646,40 @@ p11 <- ggplot(toplo11, aes(x = week, y = cnt, fill = factor(val))) +
 p1 + p2 + p11 + plot_spacer() + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + plot_layout(ncol = 2)
 ```
 
+### Modelled
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+indbymods %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == 'Final length (cm)') %>% 
+  pull(plomod)
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+indbymods %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == 'Final width (cm)') %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+indbymods %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == 'Final length (cm)') %>% 
+  pull(plomod)
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+indbymods %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == 'Final width (cm)') %>% 
+  pull(plomod)
+```
+
 ## Weight 
 
 ```{r, fig.height = 14, fig.width = 14}
@@ -721,7 +759,9 @@ p3 <- ggplot(toplo3, aes(x = val)) +
 p1 + p2 + p3 + plot_layout(ncol = 2)
 ```
 
-## Weight across individuals
+## Weight across individuals {.tabset .tabset-pills}
+
+### Observed
 
 ```{r, fig.height = 35, fig.width = 12}
 
@@ -1149,6 +1189,26 @@ p11 <- ggplot(toplo11, aes(x = week, y = cnt, fill = factor(val))) +
   )
 
 p1 + p2 + p11 + plot_spacer() + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + plot_layout(ncol = 2)
+```
+
+### Modelled
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+indbymods %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == 'Whole weight (g)') %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+indbymods %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == 'Whole weight (g)') %>% 
+  pull(plomod)
 ```
 
 ## Lenght vs weight
