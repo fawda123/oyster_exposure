@@ -16,7 +16,8 @@ library(readxl)
 library(patchwork)
 source("R/funcs.R")
 
-data(indbymod)
+data(indbymods)
+data(dirindbymods)
 
 # consistent treatment terminology names
 trts <- tibble(
@@ -646,7 +647,7 @@ p11 <- ggplot(toplo11, aes(x = week, y = cnt, fill = factor(val))) +
 p1 + p2 + p11 + plot_spacer() + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + plot_layout(ncol = 2)
 ```
 
-### Modelled
+### Modelled, all changes
 
 #### Olympia oyster
 
@@ -677,6 +678,82 @@ indbymods %>%
 indbymods %>% 
   filter(species == 'Pacific') %>% 
   filter(var == 'Final width (cm)') %>% 
+  pull(plomod)
+```
+
+### Modelled, positive growth
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dirindbymods %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == 'Final length (cm)') %>% 
+  filter(direction == 1) %>% 
+  pull(plomod)
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dirindbymods %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == 'Final width (cm)') %>% 
+  filter(direction == 1) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dirindbymods %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == 'Final length (cm)') %>% 
+  filter(direction == 1) %>% 
+  pull(plomod)
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dirindbymods %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == 'Final width (cm)') %>% 
+  filter(direction == 1) %>% 
+  pull(plomod)
+```
+
+### Modelled, negative growth
+
+#### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dirindbymods %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == 'Final length (cm)') %>% 
+  filter(direction == -1) %>% 
+  pull(plomod)
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dirindbymods %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == 'Final width (cm)') %>% 
+  filter(direction == -1) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dirindbymods %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == 'Final length (cm)') %>% 
+  filter(direction == -1) %>% 
+  pull(plomod)
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dirindbymods %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == 'Final width (cm)') %>% 
+  filter(direction == -1) %>% 
   pull(plomod)
 ```
 
@@ -1191,7 +1268,7 @@ p11 <- ggplot(toplo11, aes(x = week, y = cnt, fill = factor(val))) +
 p1 + p2 + p11 + plot_spacer() + p3 + p4 + p5 + p6 + p7 + p8 + p9 + p10 + plot_layout(ncol = 2)
 ```
 
-### Modelled
+### Modelled, all changes
 
 #### Olympia oyster
 
@@ -1211,7 +1288,51 @@ indbymods %>%
   pull(plomod)
 ```
 
-## Lenght vs weight
+### Modelled, positive weight
+
+#### Olympia oyster 
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dirindbymods %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == 'Whole weight (g)') %>% 
+  filter(direction == 1) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dirindbymods %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == 'Whole weight (g)') %>% 
+  filter(direction == 1) %>% 
+  pull(plomod)
+```
+
+### Modelled, negative weight
+
+#### Olympia oyster 
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dirindbymods %>% 
+  filter(species == 'Olympia') %>% 
+  filter(var == 'Whole weight (g)') %>% 
+  filter(direction == -1) %>% 
+  pull(plomod)
+```
+
+#### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dirindbymods %>% 
+  filter(species == 'Pacific') %>% 
+  filter(var == 'Whole weight (g)') %>% 
+  filter(direction == -1) %>% 
+  pull(plomod)
+```
+
+## Length vs weight
 
 ```{r, fig.height = 14, fig.width = 14}
 lendat <- alllen %>%

@@ -732,6 +732,106 @@ indbymods <- tomod %>%
     })
   )
 
-save(indbymods, file = here('data/indbymod.RData'), compress = 'xz')
+save(indbymods, file = here('data/indbymods.RData'), compress = 'xz')
 
 
+#  models by week tracking individual differences, pos/neg ----------------
+
+dirtomod <- tomod %>% 
+  mutate(
+    direction = sign(val)
+  ) %>% 
+  filter(direction != 0)
+
+# fit separate mixed models by species, week, jar as random effect, separate by direction
+dirindbymods <- dirtomod %>%
+  group_by(week, species, var, direction) %>% 
+  nest %>% 
+  mutate(
+    mixmod = pmap(list(var, data), function(var, data){
+      
+      tomod <- data %>%
+        mutate(
+          trt = fct_drop(trt),
+          jar = fct_drop(jar)
+        )
+      
+      # no replicate jars by treatment for whole weight
+      if(var == 'Whole weight (g)')
+        out <- glm(val ~ trt, data = tomod)
+      
+      if(var != 'Whole weight (g)')
+        out <- lmerTest::lmer(val ~ trt + (1|jar), data = tomod)
+      
+      return(out)
+      
+    }),
+    anomod = map(mixmod, function(x){
+      
+      # if(inherits(x, 'glm'))
+      #   out <- summary(x)$coefficients
+      # if(inherits(x, 'lmerModLmerTest'))
+      out <- anova(x)
+      
+      return(out)
+      
+    }),
+    # summod = map(mixmod, analyze),
+    plomod = pmap(list(week, species, var, mixmod), function(week, species, var, mixmod){
+      
+      # estimates
+      mnsval <- estimate_means(mixmod, 'trt') %>% 
+        data.frame
+      cnsval <- estimate_contrasts(mixmod, 'trt') %>%
+        mutate(
+          sig = ifelse(p < 0.05, 'sig', 'notsig'),
+          sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'significant'))
+        ) %>% 
+        unite('Contrast', Level1, Level2, sep = '-')
+      
+      # sample size
+      if(inherits(mixmod, 'glm'))
+        n <- mixmod$model %>% nrow
+      if(inherits(mixmod, 'lmerModLmerTest'))
+        n <- mixmod@frame %>% nrow
+      
+      # labels
+      subttl <- paste0(var, ', week ', week, ', ', species, ' oyster')
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      
+      # mean esimate plots
+      p1 <- ggplot(mnsval, aes(x = trt, y = Mean)) +
+        geom_point(size = 3) +
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high), colour = 'black', size = 1) +
+        labs(x = NULL, y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl) +
+        theme_ipsum() +
+        theme(
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) +
+        coord_flip()
+      
+      # contrast plots
+      p2 <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) +
+        geom_point(aes(colour = sig), size = 3) +
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = sig), size = 1) +
+        labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', title = 'Treatment differences', subtitle = subttl,
+             caption = captns) +
+        theme_ipsum() +
+        theme(
+          legend.title = element_blank(),
+          legend.position = 'bottom',
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) +
+        geom_hline(yintercept = 0, linetype = 'dotted', size = 1) +
+        scale_colour_manual(drop = F, values = c('black', 'tomato1')) +
+        coord_flip()
+      
+      p1 + p2 + plot_layout(ncol  = 2)
+      
+      
+    })
+  )
+
+save(dirindbymods, file = here('data/dirindbymods.RData'), compress = 'xz')
