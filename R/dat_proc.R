@@ -16,8 +16,8 @@ trts <- tibble(
 
 # consistent response variable terminology names
 rsps <- tibble(
-  shrtlab = c("delt_length", "delt_width", "dissolution_score", "final_length", "final_width", "folds", "irreg", "rate_length", "rate_width", "resp", "shell_weight", "tissue_weight", "total", "whole_organism_weight"),
-  lngslab = c("Delta length (cm)", "Delta width (cm)", "Dissolution score (0-3)", "Final length (cm)", "Final width (cm)", "Number of folds", "Number of irregularities", "Length rate (cm/d)", "Width rate (cm/d)", "Respiration (umol/hr/g)", "Shell weight (g)", "Tissue weight (g)", "Total observations",  "Whole weight (g)")
+  shrtlab = c("delt_size", "final_size", "rate_size", "delt_length", "delt_width", "dissolution_score", "final_length", "final_width", "folds", "irreg", "rate_length", "rate_width", "resp", "shell_weight", "tissue_weight", "total", "whole_organism_weight"),
+  lngslab = c("Delta size (cm2)", "Final size (cm2)", "Size rate (cm2/d)", "Delta length (cm)", "Delta width (cm)", "Dissolution score (0-3)", "Final length (cm)", "Final width (cm)", "Number of folds", "Number of irregularities", "Length rate (cm/d)", "Width rate (cm/d)", "Respiration (umol/hr/g)", "Shell weight (g)", "Tissue weight (g)", "Total observations",  "Whole weight (g)")
 )
 
 # data processing to tidy -------------------------------------------------
@@ -39,32 +39,32 @@ allres <- read.csv(here::here("data/raw", "Respiration_oyster_alldata.csv"), hea
 # length data
 
 # initial column measured a few days prior to week zero
-alllen <- read_excel(here::here('data/raw/Length_kelp_4_3_2020.xlsx')) %>% 
-  clean_names() %>% 
-  select(week, trt = treatment, jar, id = individual_id, species, final_length = length_cm_final, initial_length = length_cm_initial, final_width = width_cm_final, initial_width = width_cm_initial) %>% 
+alllen <- read_excel(here::here('data/raw/Length_kelp_4_3_2020.xlsx')) %>%
+  clean_names() %>%
+  select(week, trt = treatment, jar, id = individual_id, species, final_length = length_cm_final, initial_length = length_cm_initial, final_width = width_cm_final, initial_width = width_cm_initial) %>%
   mutate(
     final_length = case_when(
-      week == 0 & is.na(final_length) ~ initial_length, 
+      week == 0 & is.na(final_length) ~ initial_length,
       T ~ final_length
     ),
     final_width = case_when(
       week == 0 & is.na(final_width) ~ initial_width,
       T ~ final_width
     ),
-    delt_length = final_length - initial_length, 
-    delt_width = final_width - initial_width, 
+    delt_length = final_length - initial_length,
+    delt_width = final_width - initial_width,
     rate_length = case_when(
-      week == 2 ~ delt_length / 14, 
+      week == 2 ~ delt_length / 14,
       week == 4 ~ delt_length / 28
     ),
     rate_width = case_when(
-      week == 2 ~ delt_width / 14, 
+      week == 2 ~ delt_width / 14,
       week == 4 ~ delt_width / 28
     )
-  ) %>% 
-  gather('var', 'val', -week, -trt, -jar, -id, -species) %>% 
-  filter(week != 6) %>% 
-  filter(!(week %in% 0 & var %in% c('delt_length', 'delt_width', 'rate_width', 'rate_length'))) %>% 
+  ) %>%
+  gather('var', 'val', -week, -trt, -jar, -id, -species) %>%
+  filter(week != 6) %>%
+  filter(!(week %in% 0 & var %in% c('delt_length', 'delt_width', 'rate_width', 'rate_length'))) %>%
   filter(!var %in% c('initial_length', 'initial_width'))
 
 ##
@@ -102,9 +102,29 @@ alldis <- read.csv(here::here("data/raw", "SEM scoring datasheet_MRVERSION.csv")
 # # ingestion data
 # alling <- read.csv(here::here('data/raw', 'Ingestionrate_Rfile.csv'), stringsAsFactors = F)
 
+# body size, cm2
+allsiz <- read_csv(here::here('data/raw/Oyster Data with Surface Area from Photoshopped Images.csv')) %>% 
+    clean_names() %>%
+    select(week, trt = treatment, jar, id = individual_id, species, final_size = surface_area_cm2_final, initial_size = surface_area_cm2_initial) %>%
+    mutate(
+      final_size = case_when(
+        week == 0 & is.na(final_size) ~ initial_size,
+        T ~ final_size
+      ),
+    delt_size = final_size - initial_size,
+    rate_size = case_when(
+      week == 2 ~ delt_size / 14,
+      week == 4 ~ delt_size / 28
+    )
+  ) %>%
+  gather('var', 'val', -week, -trt, -jar, -id, -species) %>%
+  filter(week != 6) %>%
+  filter(!(week %in% 0 & var %in% c('delt_size', 'rate_size'))) %>%
+  filter(!var %in% c('initial_size'))
+
 ##
 # combine all exposure data
-allexp <- bind_rows(allres, alllen, alldis, allwts) %>% 
+allexp <- bind_rows(allres, alldis, allsiz, alllen, allwts) %>% 
   mutate(
     trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab), 
     jar = factor(jar),
