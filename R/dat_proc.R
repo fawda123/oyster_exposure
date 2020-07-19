@@ -173,14 +173,15 @@ bymods <- allexp %>%
     }), 
     # summod = map(mixmod, analyze),
     plomod = pmap(list(week, species, var, mixmod), function(week, species, var, mixmod){
-      
+
       # estimates
-      mnsval <- get_means(mixmod, 'trt')
-      cnsval <- get_contrasts(mixmod, 'trt') %>% 
+      mnsval <- estimate_means(mixmod, 'trt')
+      cnsval <- estimate_contrasts(mixmod, 'trt') %>% 
         mutate(
           sig = ifelse(p < 0.05, 'sig', 'notsig'),
           sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'significant'))
-        )
+        ) %>% 
+        unite('Contrast', Level1, Level2, sep = '-')
 
       # sample size
       if(inherits(mixmod, 'glm'))
@@ -195,7 +196,7 @@ bymods <- allexp %>%
       # mean esimate plots
       p1 <- ggplot(mnsval, aes(x = trt, y = Mean)) + 
         geom_point(size = 3) + 
-        geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher), colour = 'black', size = 1) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high), colour = 'black', size = 1) + 
         labs(x = NULL, y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl) + 
         theme_ipsum() + 
         theme(
@@ -207,7 +208,7 @@ bymods <- allexp %>%
       # contrast plots
       p2 <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) + 
         geom_point(aes(colour = sig), size = 3) + 
-        geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher, colour = sig), size = 1) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = sig), size = 1) + 
         labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', title = 'Treatment differences', subtitle = subttl,
              caption = captns) +
         theme_ipsum() + 
@@ -304,7 +305,7 @@ wtmods <- allexp %>%
     plomod = pmap(list(species, var, mixmod), function(species, var, mixmod){
 
       # estimates
-      mnsval <- get_means(mixmod, 'trt * week')
+      mnsval <- estimate_means(mixmod)
 
       # sample size
       if(inherits(mixmod, 'glm'))
@@ -318,7 +319,7 @@ wtmods <- allexp %>%
       
       # mean esimate plots
       p1 <- ggplot(mnsval, aes(x = week, y = Mean, group = trt, colour = trt, fill = trt)) + 
-        geom_errorbar(aes(ymin = CI_lower, ymax = CI_higher, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
         geom_line(position = position_dodge(0.3)) + 
         geom_point(size = 3, position = position_dodge(0.3), pch = 21, colour = 'black') + 
         labs(x = 'Exposure week', y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl, caption = captns) + 
