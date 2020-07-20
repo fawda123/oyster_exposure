@@ -1212,108 +1212,185 @@ dirindbymods %>%
   pull(plomod)
 ```
 
-<!-- ## Length vs weight -->
+## Size vs weight vs. length
 
-<!-- ```{r, fig.height = 14, fig.width = 14} -->
-<!-- lendat <- alllen %>% -->
-<!--   group_by_at(vars(-val)) %>%  -->
-<!--   summarise(val = mean(val, na.rm = T)) %>%  -->
-<!--   ungroup %>%  -->
-<!--   spread(var, val) -->
+```{r, fig.height = 26, fig.width = 14}
 
-<!-- wtsdat <- allwts %>% -->
-<!--   group_by_at(vars(-val)) %>%  -->
-<!--   summarise(val = mean(val, na.rm = T)) %>%  -->
-<!--   ungroup %>%  -->
-<!--   spread(var, val) -->
+toplo1 <- allind %>% 
+  group_by_at(vars(-val)) %>% 
+  summarise(val = mean(val, na.rm = T)) %>% 
+  ungroup %>% 
+  spread(var, val)
 
-<!-- toplo1 <- inner_join(lendat, wtsdat, by = c('week', 'trt', 'jar', 'id', 'species')) %>%  -->
-<!--   mutate( -->
-<!--     trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab) -->
-<!--   ) -->
+p1 <- ggplot(toplo1, aes(x = `Final size (cm2)`, y = `Shell weight (g)`, colour = trt)) +
+  geom_point(alpha = 0.7) +
+  # geom_smooth(se = F, method = 'lm') +
+  scale_colour_viridis_d() +
+  facet_grid(week ~ species) +
+  theme_bw() +
+  theme(
+    # panel.background = element_blank(),
+    strip.background = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.title = element_blank()
+  ) +
+  labs(
+    title = 'Tracking shell weight vs size',
+    subtitle = 'Panels separated by species, week, and treatment',
+    y = 'Shell weight (g)',
+    x = 'Final size (cm2)'
+  )
 
-<!-- p1 <- ggplot(toplo1, aes(x = final_length, y = shell_weight, colour = trt)) +  -->
-<!--   geom_point(alpha = 0.7) +  -->
-<!--   # geom_smooth(se = F, method = 'lm') +  -->
-<!--   scale_colour_viridis_d() + -->
-<!--   facet_grid(week ~ species) + -->
-<!--   theme_bw() +  -->
-<!--   theme( -->
-<!--     # panel.background = element_blank(),  -->
-<!--     strip.background = element_blank(), -->
-<!--     axis.ticks = element_blank(),  -->
-<!--     panel.grid.minor = element_blank(), -->
-<!--     legend.title = element_blank() -->
-<!--   ) +  -->
-<!--   labs( -->
-<!--     title = 'Tracking shell weight vs length',  -->
-<!--     subtitle = 'Panels separated by species, week, and treatment', -->
-<!--     y = 'Shell weight (g)',  -->
-<!--     x = 'Final length (cm)' -->
-<!--   ) -->
+p2 <- ggplot(toplo1, aes(x = `Final size (cm2)`, y = `Tissue weight (g)`, colour = trt)) +
+  geom_point(alpha = 0.7) +
+  # geom_smooth(se = F, method = 'lm') +
+  scale_colour_viridis_d() +
+  facet_grid(week ~ species) +
+  theme_bw() +
+  theme(
+    # panel.background = element_blank(),
+    strip.background = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.title = element_blank()
+  ) +
+  labs(
+    title = 'Tracking tissue weight by size',
+    subtitle = 'Panels separated by species, week, and treatment',
+    y = 'Tissue weight (g)',
+    x = 'Final size (cm2)'
+  )
 
-<!-- p2 <- ggplot(toplo1, aes(x = final_length, y = final_width, colour = trt)) +  -->
-<!--   geom_point(alpha = 0.7) +  -->
-<!--   # geom_smooth(se = F, method = 'lm') +  -->
-<!--   scale_colour_viridis_d() + -->
-<!--   facet_grid(week ~ species) + -->
-<!--   theme_bw() +  -->
-<!--   theme( -->
-<!--     # panel.background = element_blank(),  -->
-<!--     strip.background = element_blank(), -->
-<!--     axis.ticks = element_blank(),  -->
-<!--     panel.grid.minor = element_blank(),  -->
-<!--     legend.title = element_blank() -->
-<!--   ) +  -->
-<!--   labs( -->
-<!--     title = 'Tracking width vs length',  -->
-<!--     subtitle = 'Panels separated by species, week, and treatment', -->
-<!--     y = 'Final width (cm)',  -->
-<!--     x = 'Final length (cm)' -->
-<!--   ) -->
+p3 <- ggplot(toplo1, aes(x = `Shell weight (g)`, y = `Tissue weight (g)`, colour = trt)) +
+  geom_point(alpha = 0.7) +
+  # geom_smooth(se = F, method = 'lm') +
+  scale_colour_viridis_d() +
+  facet_grid(week ~ species) +
+  theme_bw() +
+  theme(
+    # panel.background = element_blank(),
+    strip.background = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.title = element_blank()
+  ) +
+  labs(
+    title = 'Tracking tissue weight by shell weight',
+    subtitle = 'Panels separated by species, week, and treatment',
+    y = 'Tissue weight (g)',
+    x = 'Shell weight (g)'
+  )
 
-<!-- p3 <- ggplot(toplo1, aes(x = final_length, y = tissue_weight, colour = trt)) +  -->
-<!--   geom_point(alpha = 0.7) +  -->
-<!--   # geom_smooth(se = F, method = 'lm') +  -->
-<!--   scale_colour_viridis_d() + -->
-<!--   facet_grid(week ~ species) + -->
-<!--   theme_bw() +  -->
-<!--   theme( -->
-<!--     # panel.background = element_blank(),  -->
-<!--     strip.background = element_blank(), -->
-<!--     axis.ticks = element_blank(),  -->
-<!--     panel.grid.minor = element_blank(), -->
-<!--     legend.title = element_blank() -->
-<!--   ) +  -->
-<!--   labs( -->
-<!--     title = 'Tracking tissue weight vs length',  -->
-<!--     subtitle = 'Panels separated by species, week, and treatment', -->
-<!--     y = 'Tissue weight (g)',  -->
-<!--     x = 'Final length (cm)' -->
-<!--   ) -->
+lendat <- alllen <- read_excel(here::here('data/raw/Length_kelp_4_3_2020.xlsx')) %>%
+  clean_names() %>%
+  select(week, trt = treatment, jar, id = individual_id, species, final_length = length_cm_final, initial_length = length_cm_initial, final_width = width_cm_final, initial_width = width_cm_initial) %>%
+  mutate(
+    final_length = case_when(
+      week == 0 & is.na(final_length) ~ initial_length,
+      T ~ final_length
+    ),
+    final_width = case_when(
+      week == 0 & is.na(final_width) ~ initial_width,
+      T ~ final_width
+    ),
+    delt_length = final_length - initial_length,
+    delt_width = final_width - initial_width,
+    rate_length = case_when(
+      week == 2 ~ delt_length / 14,
+      week == 4 ~ delt_length / 28
+    ),
+    rate_width = case_when(
+      week == 2 ~ delt_width / 14,
+      week == 4 ~ delt_width / 28
+    )
+  ) %>%
+  gather('var', 'val', -week, -trt, -jar, -id, -species) %>%
+  filter(week != 6) %>%
+  filter(!(week %in% 0 & var %in% c('delt_length', 'delt_width', 'rate_width', 'rate_length'))) %>%
+  filter(!var %in% c('initial_length', 'initial_width')) %>% 
+  group_by_at(vars(-val)) %>% 
+  summarise(val = mean(val, na.rm = T)) %>% 
+  ungroup %>% 
+  spread(var, val) %>% 
+  mutate(jar = as.character(jar))
 
-<!-- p4 <- ggplot(toplo1, aes(x = tissue_weight, y = shell_weight, colour = trt)) +  -->
-<!--   geom_point(alpha = 0.7) +  -->
-<!--   # geom_smooth(se = F, method = 'lm') +  -->
-<!--   scale_colour_viridis_d() + -->
-<!--   facet_grid(week ~ species) + -->
-<!--   theme_bw() +  -->
-<!--   theme( -->
-<!--     # panel.background = element_blank(),  -->
-<!--     strip.background = element_blank(), -->
-<!--     axis.ticks = element_blank(),  -->
-<!--     panel.grid.minor = element_blank(), -->
-<!--     legend.title = element_blank() -->
-<!--   ) +  -->
-<!--   labs( -->
-<!--     title = 'Tracking shell weight vs tissue weight',  -->
-<!--     subtitle = 'Panels separated by species, week, and treatment', -->
-<!--     y = 'Shell weight (g)',  -->
-<!--     x = 'Tissue weight (g)' -->
-<!--   ) -->
+toplo2 <- allind %>% 
+  group_by_at(vars(-val)) %>% 
+  summarise(val = mean(val, na.rm = T)) %>% 
+  ungroup %>% 
+  spread(var, val) %>% 
+  mutate(
+    jar = as.character(jar), 
+    trt = as.character(trt)
+  ) %>% 
+  inner_join(lendat, ., by = c('week', 'trt', 'jar', 'id', 'species')) %>% 
+  mutate(
+    trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab)
+  )
 
-<!-- p1 + p2 + p3 + p4 + plot_layout(ncol = 2) -->
-<!-- ``` -->
+p4 <- ggplot(toplo2, aes(x = `Final size (cm2)`, y = final_length, colour = trt)) +
+  geom_point(alpha = 0.7) +
+  # geom_smooth(se = F, method = 'lm') +
+  scale_colour_viridis_d() +
+  facet_grid(week ~ species) +
+  theme_bw() +
+  theme(
+    # panel.background = element_blank(),
+    strip.background = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.title = element_blank()
+  ) +
+  labs(
+    title = 'Tracking length by size',
+    subtitle = 'Panels separated by species, week, and treatment',
+    y = 'Final length (cm)',
+    x = 'Final size (cm2)'
+  )
+
+p5 <- ggplot(toplo2, aes(x = `Final size (cm2)`, y = final_width, colour = trt)) +
+  geom_point(alpha = 0.7) +
+  # geom_smooth(se = F, method = 'lm') +
+  scale_colour_viridis_d() +
+  facet_grid(week ~ species) +
+  theme_bw() +
+  theme(
+    # panel.background = element_blank(),
+    strip.background = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.title = element_blank()
+  ) +
+  labs(
+    title = 'Tracking width by size',
+    subtitle = 'Panels separated by species, week, and treatment',
+    y = 'Final width (cm)',
+    x = 'Final size (cm2)'
+  )
+
+p6 <- ggplot(toplo2, aes(x = final_length, y = final_width, colour = trt)) +
+  geom_point(alpha = 0.7) +
+  # geom_smooth(se = F, method = 'lm') +
+  scale_colour_viridis_d() +
+  facet_grid(week ~ species) +
+  theme_bw() +
+  theme(
+    # panel.background = element_blank(),
+    strip.background = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.title = element_blank()
+  ) +
+  labs(
+    title = 'Tracking width by length',
+    subtitle = 'Panels separated by species, week, and treatment',
+    y = 'Final width (cm)',
+    x = 'Final length (cm)'
+  )
+
+p1 + p2 + p3 + p4 + p5 + p6 + plot_layout(ncol = 2)
+```
 
 ## Survival 
 
