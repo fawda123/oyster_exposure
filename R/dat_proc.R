@@ -114,11 +114,11 @@ allsiz <- read_csv(here::here('data/raw/Oyster Data with Surface Area from Photo
     delt_size = final_size - initial_size,
     rate_size = case_when(
       week == 2 ~ delt_size / 14,
-      week == 4 ~ delt_size / 28
+      week == 4 ~ delt_size / 28, 
+      week == 6 ~ delt_size / 42
     )
   ) %>%
   gather('var', 'val', -week, -trt, -jar, -id, -species) %>%
-  filter(week != 6) %>%
   filter(!(week %in% 0 & var %in% c('delt_size', 'rate_size'))) %>%
   filter(!var %in% c('initial_size'))
 
