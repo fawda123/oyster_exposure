@@ -119,7 +119,7 @@ allsiz <- read_csv(here::here('data/raw/Oyster Data with Surface Area from Photo
     )
   ) %>%
   gather('var', 'val', -week, -trt, -jar, -id, -species) %>%
-  filter(!(week %in% 0 & var %in% c('delt_size', 'rate_size'))) %>%
+  filter(!(week %in% 0 & var %in% c('delt_size', 'rate_size', 'final_size'))) %>%
   filter(!var %in% c('initial_size'))
 
 ##
