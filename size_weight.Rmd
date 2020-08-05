@@ -159,7 +159,7 @@ p1 + p2 + p3 + plot_layout(ncol = 2)
 ```{r, fig.height = 35, fig.width = 12}
 
 # all individuals
-datprp <- read_csv(here::here('data/raw/Oyster Data with Surface Area from Photoshopped Images.csv')) %>% 
+datprp <- read_csv(here::here('data/raw/finaldata-with-newmissingdata.csv')) %>% 
   clean_names() %>%
   select(week, trt = treatment, jar, id = individual_id, species, final_size = surface_area_cm2_final, initial_size = surface_area_cm2_initial)
 
@@ -593,7 +593,7 @@ indbymods %>%
   pull(plomod)
 ```
 
-### Modelled, positive weight
+### Modelled, positive size
 
 #### Olympia oyster 
 
@@ -615,7 +615,7 @@ dirindbymods %>%
   pull(plomod)
 ```
 
-### Modelled, negative weight
+### Modelled, negative size
 
 #### Olympia oyster 
 

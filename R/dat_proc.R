@@ -103,7 +103,7 @@ alldis <- read.csv(here::here("data/raw", "SEM scoring datasheet_MRVERSION.csv")
 # alling <- read.csv(here::here('data/raw', 'Ingestionrate_Rfile.csv'), stringsAsFactors = F)
 
 # body size, cm2
-allsiz <- read_csv(here::here('data/raw/Oyster Data with Surface Area from Photoshopped Images.csv')) %>% 
+allsiz <- read_csv(here::here('data/raw/finaldata-with-newmissingdata.csv')) %>% 
     clean_names() %>%
     select(week, trt = treatment, jar, id = individual_id, species, final_size = surface_area_cm2_final, initial_size = surface_area_cm2_initial) %>%
     mutate(
@@ -354,7 +354,7 @@ rsps <- tibble(
 )
 
 # body size, cm2
-allsiz <- read_csv(here::here('data/raw/Oyster Data with Surface Area from Photoshopped Images.csv')) %>% 
+allsiz <- read_csv(here::here('data/raw/finaldata-with-newmissingdata.csv')) %>% 
   clean_names() %>%
   select(week, trt = treatment, jar, id = individual_id, species, final_size = surface_area_cm2_final, initial_size = surface_area_cm2_initial) %>%
   mutate(
@@ -404,7 +404,7 @@ rsps <- tibble(
 )
 
 # body size, cm2
-szdat<- read_csv(here::here('data/raw/Oyster Data with Surface Area from Photoshopped Images.csv')) %>% 
+szdat<- read_csv(here::here('data/raw/finaldata-with-newmissingdata.csv')) %>% 
   clean_names() %>%
   select(week, trt = treatment, jar, id = individual_id, species, final_size = surface_area_cm2_final, initial_size = surface_area_cm2_initial) %>%
   mutate(
