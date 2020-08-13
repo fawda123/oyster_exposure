@@ -1,0 +1,228 @@
+---
+output: 
+  html_document:
+    code_folding: hide
+css: styles.css
+---
+  
+# Oyster exposure experiments, size and weight quantile regression {.tabset}
+
+```{r setup, message = F, warning = F, results = 'hide'}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, fig.path = 'figs/', dev.args = list(family = 'serif'))
+
+library(tidyverse)
+library(janitor)
+library(readxl)
+library(patchwork)
+source("R/funcs.R")
+
+data(allind)
+
+# consistent treatment terminology names
+trts <- tibble(
+  shrtlab = c("7.7C", "7.7A0.2", "7.7A0.5", "8.0C", "8.0A0.2"),
+  lngslab = c( "7.7 Constant", "7.7 Fluctuating 0.2A", "7.7 Fluctuating 0.5A", "8.0 Constant", "8.0 Fluctuating 0.2A")
+)
+
+library(tidyverse)
+library(quantreg)
+library(modelbased)
+
+data(allexp)
+
+qntplos <- allexp %>% 
+  filter(var %in% c('Delta size (cm2)', 'Final size (cm2)', 'Size rate (cm2/d)', 'Shell weight (g)', 'Tissue weight (g)', 'Whole weight (g)')) %>% 
+  mutate(var = fct_drop(var)) %>% 
+  group_by(species, var, week) %>% 
+  nest %>%
+  mutate(
+    qtmod = purrr::map(data, function(x){
+      
+      mod <- rq(val ~ 0 + trt, tau = c(0.9), data = x)      
+      return(mod)
+      
+    }), 
+    qtplo = purrr::pmap(list(data, qtmod, var, week, species), function(data, qtmod, var, week, species){
+      
+      tomod <- data
+      
+      coeffs <- summary(qtmod)$coefficients %>% 
+        data.frame %>% 
+        rownames_to_column('trt') %>% 
+        rename(val = coefficients) %>% 
+        mutate(
+          trt = gsub('^trt', '', trt), 
+          trt = factor(trt, levels = trts$shrtlab)
+          )
+      
+      p1 <- ggplot(tomod, aes(y = trt, x = val)) + 
+        geom_point(position = position_jitter(height = 0.1), alpha = 0.4) +
+        geom_point(data = coeffs, col = 'red', size = 3) + 
+        # geom_errorbarh(data = coeffs, aes(xmin = lower.bd, xmax = upper.bd), col = 'red', width = 0.2) + 
+        theme_minimal() + 
+        theme(
+          panel.grid.major.y = element_blank(), 
+          panel.grid.minor.y = element_blank(), 
+          panel.grid.minor.x = element_blank(), 
+          axis.title.y = element_blank()
+        ) + 
+        labs(
+          x = var,
+          title = paste(species, '90th percentile model'),
+          subtitle = paste0('Week ', week, ', observed data and quantile estimate')
+        )
+      
+      p2 <-  ggplot(coeffs, aes(y = trt, x = val)) + 
+        geom_point(data = coeffs, col = 'red', size = 3) + 
+        geom_errorbarh(data = coeffs, aes(xmin = lower.bd, xmax = upper.bd), col = 'red', width = 0.2) +
+        theme_minimal() + 
+        theme(
+          panel.grid.major.y = element_blank(), 
+          panel.grid.minor.y = element_blank(), 
+          panel.grid.minor.x = element_blank(), 
+          axis.title.y = element_blank()
+        ) + 
+        labs(
+          x = var,
+          title = paste(species, '90th percentile model'),
+          subtitle = paste0('Week ', week, ', quantile estimate and CI bounds')
+        )
+      
+      out <- (p1 + p2 + plot_layout(ncol = 2))
+      
+      return(out)
+      
+    })
+  )
+
+```
+
+## Shell weight {.tabset .tabset-pills}
+
+### Olympia 
+
+```{r, fig.height = 9, fig.width = 7}
+pls <- qntplos %>% 
+  filter(var %in% 'Shell weight (g)') %>% 
+  filter(species %in% 'Olympia')
+pl1 <- pls %>% filter(week == 2) %>% pull(qtplo) %>% .[[1]]
+pl2 <- pls %>% filter(week == 4) %>% pull(qtplo) %>% .[[1]]
+pl3 <- pls %>% filter(week == 6) %>% pull(qtplo) %>% .[[1]]
+pl1 / pl2 / pl3
+```
+
+### Pacific
+
+```{r, fig.height = 9, fig.width = 7}
+pls <- qntplos %>% 
+  filter(var %in% 'Shell weight (g)') %>% 
+  filter(species %in% 'Pacific')
+pl1 <- pls %>% filter(week == 2) %>% pull(qtplo) %>% .[[1]]
+pl2 <- pls %>% filter(week == 4) %>% pull(qtplo) %>% .[[1]]
+pl3 <- pls %>% filter(week == 6) %>% pull(qtplo) %>% .[[1]]
+pl1 / pl2 / pl3
+```
+
+## Tissue weight {.tabset .tabset-pills}
+
+### Olympia 
+
+```{r, fig.height = 9, fig.width = 7}
+pls <- qntplos %>% 
+  filter(var %in% 'Tissue weight (g)') %>% 
+  filter(species %in% 'Olympia')
+pl1 <- pls %>% filter(week == 2) %>% pull(qtplo) %>% .[[1]]
+pl2 <- pls %>% filter(week == 4) %>% pull(qtplo) %>% .[[1]]
+pl3 <- pls %>% filter(week == 6) %>% pull(qtplo) %>% .[[1]]
+pl1 / pl2 / pl3
+```
+
+### Pacific 
+
+```{r, fig.height = 9, fig.width = 7}
+pls <- qntplos %>% 
+  filter(var %in% 'Tissue weight (g)') %>% 
+  filter(species %in% 'Pacific')
+pl1 <- pls %>% filter(week == 2) %>% pull(qtplo) %>% .[[1]]
+pl2 <- pls %>% filter(week == 4) %>% pull(qtplo) %>% .[[1]]
+pl3 <- pls %>% filter(week == 6) %>% pull(qtplo) %>% .[[1]]
+pl1 / pl2 / pl3
+```
+
+## Delta size {.tabset .tabset-pills}
+
+### Olympia 
+
+```{r, fig.height = 9, fig.width = 7}
+pls <- qntplos %>% 
+  filter(var %in% 'Delta size (cm2)') %>% 
+  filter(species %in% 'Olympia')
+pl1 <- pls %>% filter(week == 2) %>% pull(qtplo) %>% .[[1]]
+pl2 <- pls %>% filter(week == 4) %>% pull(qtplo) %>% .[[1]]
+pl3 <- pls %>% filter(week == 6) %>% pull(qtplo) %>% .[[1]]
+pl1 / pl2 / pl3
+```
+
+### Pacific 
+
+```{r, fig.height = 9, fig.width = 7}
+pls <- qntplos %>% 
+  filter(var %in% 'Delta size (cm2)') %>% 
+  filter(species %in% 'Pacific')
+pl1 <- pls %>% filter(week == 2) %>% pull(qtplo) %>% .[[1]]
+pl2 <- pls %>% filter(week == 4) %>% pull(qtplo) %>% .[[1]]
+pl3 <- pls %>% filter(week == 6) %>% pull(qtplo) %>% .[[1]]
+pl1 / pl2 / pl3
+```
+
+## Final size {.tabset .tabset-pills}
+
+### Olympia 
+
+```{r, fig.height = 9, fig.width = 7}
+pls <- qntplos %>% 
+  filter(var %in% 'Final size (cm2)') %>% 
+  filter(species %in% 'Olympia')
+pl1 <- pls %>% filter(week == 2) %>% pull(qtplo) %>% .[[1]]
+pl2 <- pls %>% filter(week == 4) %>% pull(qtplo) %>% .[[1]]
+pl3 <- pls %>% filter(week == 6) %>% pull(qtplo) %>% .[[1]]
+pl1 / pl2 / pl3
+```
+
+### Pacific 
+
+```{r, fig.height = 9, fig.width = 7}
+pls <- qntplos %>% 
+  filter(var %in% 'Final size (cm2)') %>% 
+  filter(species %in% 'Pacific')
+pl1 <- pls %>% filter(week == 2) %>% pull(qtplo) %>% .[[1]]
+pl2 <- pls %>% filter(week == 4) %>% pull(qtplo) %>% .[[1]]
+pl3 <- pls %>% filter(week == 6) %>% pull(qtplo) %>% .[[1]]
+pl1 / pl2 / pl3
+```
+
+## Size rate {.tabset .tabset-pills}
+
+### Olympia 
+
+```{r, fig.height = 9, fig.width = 7}
+pls <- qntplos %>% 
+  filter(var %in% 'Size rate (cm2/d)') %>% 
+  filter(species %in% 'Olympia')
+pl1 <- pls %>% filter(week == 2) %>% pull(qtplo) %>% .[[1]]
+pl2 <- pls %>% filter(week == 4) %>% pull(qtplo) %>% .[[1]]
+pl3 <- pls %>% filter(week == 6) %>% pull(qtplo) %>% .[[1]]
+pl1 / pl2 / pl3
+```
+
+### Pacific 
+
+```{r, fig.height = 9, fig.width = 7}
+pls <- qntplos %>% 
+  filter(var %in% 'Size rate (cm2/d)') %>% 
+  filter(species %in% 'Pacific')
+pl1 <- pls %>% filter(week == 2) %>% pull(qtplo) %>% .[[1]]
+pl2 <- pls %>% filter(week == 4) %>% pull(qtplo) %>% .[[1]]
+pl3 <- pls %>% filter(week == 6) %>% pull(qtplo) %>% .[[1]]
+pl1 / pl2 / pl3
+```
