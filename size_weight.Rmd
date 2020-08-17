@@ -14,6 +14,9 @@ library(tidyverse)
 library(janitor)
 library(readxl)
 library(patchwork)
+library(survival)
+library(ggfortify)
+
 source("R/funcs.R")
 
 data(allind)
@@ -1394,10 +1397,10 @@ p1 + p2 + p3 + p4 + p5 + p6 + plot_layout(ncol = 2)
 
 ## Survival 
 
-```{r, fig.height = 7, fig.width = 7}
-toplo1 <- read.csv(here::here('data/raw/Weight_with dead but not multiple_Kelp_4_3.csv'), stringsAsFactors = F) %>% 
+```{r, fig.height = 5, fig.width = 7}
+
+srvdat <- read.csv(here::here('data/raw/Weight_with dead but not multiple_Kelp_4_3.csv'), stringsAsFactors = F) %>% 
   clean_names() %>% 
-  # filter(week != 0) %>% 
   filter(species != '') %>% 
   mutate(species = gsub('\\s*$', '', species)) %>% 
   rename(
@@ -1410,80 +1413,72 @@ toplo1 <- read.csv(here::here('data/raw/Weight_with dead but not multiple_Kelp_4
     dead = case_when(
       dead %in% c('x', 'X') ~ 1, 
       T ~ 0
-    )
+    ), 
+    trt = factor(trt, levels = trts$shrtlab)
   ) %>% 
-  group_by(week, trt, species) %>% 
-  summarise(percdead = 100 * sum(dead) / length(dead)) %>%
-  ungroup() %>% 
-  filter(trt != '') %>% 
+  group_by(species) %>%
+  nest %>% 
   mutate(
-    trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab)
+    srvmod = purrr::map(data, function(x){
+      
+      fit <- survfit(Surv(week, dead) ~ trt, data = x)
+      return(fit)
+      
+    }), 
+    srvdif = purrr::map(data, function(x){
+    
+      fit <- survdiff(Surv(week, dead) ~ trt, data = x)
+      return(fit)
+      
+    })
   )
 
-p1 <- ggplot(toplo1, aes(x = week, y = percdead, fill = trt)) + 
-  geom_bar(stat = 'identity') + 
-  scale_fill_viridis_d() + 
-  facet_grid(trt ~ species) +
-  scale_x_continuous(breaks = c(0, 2, 4, 6)) + 
-  theme_bw() + 
+srvplos <- srvdat %>% 
+  mutate(
+    plodat = purrr::map(srvmod, fortify)
+  ) %>% 
+  select(-data, -srvmod, -srvdif) %>% 
+  unnest(plodat)
+
+cols <- c('khaki4', 'khaki3', 'khaki1', 'seagreen4', 'seagreen2')
+names(cols) <- trts$shrtlab
+
+p <- ggplot(srvplos, aes(x = time, y = surv)) + 
+  geom_line(aes(colour = strata), size = 1.5) + 
+  geom_ribbon(aes(ymin = lower, ymax = upper), colour = NA, fill = 'lightgrey', alpha = 0.25) +
+  facet_grid(species ~ strata) +
+  scale_colour_manual('Treatment', values = cols, guide = F) +
+  theme_minimal() +
   theme(
-    # panel.background = element_blank(), 
-    strip.background = element_blank(),
-    axis.ticks = element_blank(), 
-    panel.grid.minor = element_blank(), 
-    legend.title = element_blank()
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.x = element_blank(), 
+    legend.position = 'top'
   ) + 
   labs(
-    title = 'Percent dead by week', 
-    subtitle = 'Panels separated by species, treatment',
-    y = '% dead at each time point', 
-    x = 'Week'
+    x = 'Week', 
+    y = '% survival', 
+    title = 'Survival estimates by treatment and species',
+    subtitle = 'Shaded region is 95% CI'
   )
+p
 
-toplo2 <- read.csv(here::here('data/raw/Weight_with dead but not multiple_Kelp_4_3.csv'), stringsAsFactors = F) %>% 
-  clean_names() %>% 
-  # filter(week != 0) %>% 
-  filter(species != '') %>% 
-  mutate(species = gsub('\\s*$', '', species)) %>% 
-  rename(
-    id = individual_id, 
-    jar = i_jar,
-    trt = treatment
-  ) %>% 
-  select(week, trt, jar, id, species, dead) %>% 
-  mutate(
-    dead = case_when(
-      dead %in% c('x', 'X') ~ 1, 
-      T ~ 0
-    )
-  ) %>% 
-  group_by(trt, species) %>% 
-  summarise(percdead = 100 * sum(dead) / length(dead)) %>%
-  ungroup() %>% 
-  filter(trt != '') %>% 
-  mutate(
-    trt = factor(trt, levels = trts$shrtlab, labels = trts$shrtlab)
-  )
+```
 
-p2 <- ggplot(toplo2, aes(x = trt, y = percdead, fill = trt)) + 
-  geom_bar(stat = 'identity') + 
-  scale_fill_viridis_d() + 
-  facet_grid( ~ species) +
-  theme_bw() + 
-  theme(
-    # panel.background = element_blank(), 
-    strip.background = element_blank(),
-    axis.ticks = element_blank(), 
-    panel.grid.minor = element_blank(), 
-    legend.position = 'none'
-  ) + 
-  labs(
-    title = 'Percent dead across weeks', 
-    subtitle = 'Panels separated by species',
-    y = '% dead', 
-    x = 'Treatment'
-  )
+Olympia survival difference test
 
-p1 + p2 + plot_layout(ncol = 1, height = c(1, 0.25), guides = 'collect')
+```{r}
+srvdat %>% 
+  filter(species %in% 'Olympia') %>% 
+  pull(srvdif) %>% 
+  .[[1]]
+```
+
+Pacific survival difference test
+
+```{r}
+srvdat %>% 
+  filter(species %in% 'Pacific') %>% 
+  pull(srvdif) %>% 
+  .[[1]]
 ```
 
