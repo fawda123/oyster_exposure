@@ -1482,3 +1482,30 @@ srvdat %>%
   .[[1]]
 ```
 
+## Species differences
+
+```{r, fig.height = 8, fig.width = 9}
+ggplot(allind, aes(x = week, y = val, group = species)) + 
+  geom_point(aes(fill = species), position = position_jitterdodge(jitter.width = 0.1), colour = 'black', alpha = 0.2, size = 0.5) + 
+  stat_summary(aes(colour = species), position = position_jitterdodge(jitter.width = 0.1),
+    fun.data = 'mean_cl_boot') + 
+  stat_summary(aes(colour = species), position = position_jitterdodge(jitter.width = 0.1),
+    fun.y = mean, geom = "line") +
+  facet_grid(var ~ trt, scales = 'free_y', switch = 'y') + 
+  scale_colour_manual(values = c('coral1', 'coral4')) + 
+  theme_minimal(base_size = 16) + 
+  theme(
+    axis.title.y = element_blank(),
+    strip.background = element_blank(),
+    strip.placement = 'outside', 
+    legend.title = element_blank(), 
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.x = element_blank(), 
+    panel.grid.minor.y = element_blank(), 
+    legend.position = 'top'
+  ) +
+  labs(
+    x = 'Week'
+  )
+```
+
