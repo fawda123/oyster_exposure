@@ -1395,11 +1395,12 @@ p6 <- ggplot(toplo2, aes(x = final_length, y = final_width, colour = trt)) +
 p1 + p2 + p3 + p4 + p5 + p6 + plot_layout(ncol = 2)
 ```
 
-## Survival 
+## Survival {.tabset .tabset-pills}
+
+### Between treatments, separate species
 
 ```{r, fig.height = 5, fig.width = 7}
-
-srvdat <- read.csv(here::here('data/raw/Weight_with dead but not multiple_Kelp_4_3.csv'), stringsAsFactors = F) %>% 
+srvraw <- read.csv(here::here('data/raw/Weight_with dead but not multiple_Kelp_4_3.csv'), stringsAsFactors = F) %>% 
   clean_names() %>% 
   filter(species != '') %>% 
   mutate(species = gsub('\\s*$', '', species)) %>% 
@@ -1415,7 +1416,9 @@ srvdat <- read.csv(here::here('data/raw/Weight_with dead but not multiple_Kelp_4
       T ~ 0
     ), 
     trt = factor(trt, levels = trts$shrtlab)
-  ) %>% 
+  )
+  
+srvdat <- srvraw %>% 
   group_by(species) %>%
   nest %>% 
   mutate(
@@ -1480,6 +1483,39 @@ srvdat %>%
   filter(species %in% 'Pacific') %>% 
   pull(srvdif) %>% 
   .[[1]]
+```
+
+### Between species, grouped treatments
+
+```{r}
+srvmod <- survfit(Surv(week, dead) ~ species, data = srvraw)
+srvdif <- survdiff(Surv(week, dead) ~ species, data = srvraw)
+```
+
+```{r, fig.height = 3.5, fig.width = 5}
+srvplos <- fortify(srvmod)
+
+p <- ggplot(srvplos, aes(x = time, y = surv)) + 
+  geom_line(aes(colour = strata), size = 1.5) + 
+  geom_ribbon(aes(ymin = lower, ymax = upper), colour = NA, fill = 'lightgrey', alpha = 0.25) +
+  facet_grid( ~ strata) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.x = element_blank(), 
+    legend.position = 'none'
+  ) + 
+  labs(
+    x = 'Week', 
+    y = '% survival', 
+    title = 'Survival estimates by species, across treatments',
+    subtitle = 'Shaded region is 95% CI'
+  )
+p
+```
+
+```{r}
+srvdif
 ```
 
 ## Species differences
