@@ -1,0 +1,14 @@
+---
+output: 
+  bookdown::word_document2
+---
+
+# Some results
+
+Linear models of treatment response either within week or including week as a predictor showed that there were few significant differences in size or weights for both species of oysters.  Mixed-effects models for weight that evaluated each week separately showed no significant associations with treatment for Olympia, except for the week 4 model which showed significantly larger individuals in the 7.7A0.5 treatment compared to those in the 8.0C treatment.  There was no significant week or treatment effect in the weight models for Olympia using the two-way analysis design.  Similarly, mixed-effect models for weight of Pacific oysters had no significant differences for treatments within each model, except for the week 2 model where the 7.7A0.2 treatment had individuals that were on average significantly heavier than all other treatments.  There were no significant week or treatment differences for weight of Pacific oysters in the two-way analysis models.  For size, there were no differences for either species for any of the models.  However, a comparison of size rate measured as the areal growth per day showed a significant effect of week for Pacific oysters, where the growth rates were in consistent decline across the experiment.
+
+Quantile regression models for individuals showing only positive growth revealed some significant differences among treatments.  By week six, the 80th percentile of weight values for Olympia oysters were significantly lower for the 7.7C and 8.0A0.2 treatments compared the 8.0C control treatment.  Similar differences were not observed for Pacific oysters.  For size differences, quantile regression models that evaluated both treatment and week effects showed that the 80th percentile of individuals were significantly larger by week four and week six compared to week 2 for both species, although there were no treatment differences.  
+
+Although the above analyses were focused primarily on evaluating treatment effects over time within each species, important inter-specific differences in growth were observed.  For nearly all treatments and time periods, Olympia oysters were significantly larger than Pacific oyster for both surface area and weight. However, growth rates between species were similar, suggesting the rate of response to treatment over time is not dependent on species.  
+
+The mortality ranged between 6 and 8% across the weeks and treatments for the Olympia and Pacific oyster, with total mortality by week six ranging from 10% (Pacific 8.0C) to 20% (Olympia, 7.7C) of the initial values at the beginning of the experiment. Kaplan-Meier (KM) survival estimates showed no statistical differences across treatments for the same species (χ2 = 2.1; df=4; p=0.7 for Olympia; χ2 = 2.3; df=4; p=0.7 for Pacific; Supplementary Figure 5), nor for between species with grouped treatments (χ2 = 1.1; df=1; p=0.3). 
