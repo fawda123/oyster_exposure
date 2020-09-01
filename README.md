@@ -8,4 +8,4 @@ Separate size and weight analyses within treatments: <https://fawda123.github.io
 
 Quantile regression models: <https://fawda123.github.io/oyster_exposure/qntmods.html>
 
-Select figures: <https://fawda123.github.io/figures.html>
+Select figures: <https://fawda123.github.io/oyster_exposure/figures.html>
