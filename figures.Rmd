@@ -17,6 +17,8 @@ library(kableExtra)
 library(shiny)
 library(quantreg)
 library(janitor)
+library(survival)
+library(ggfortify)
 
 data(bymods)
 data(wtmods)
@@ -335,3 +337,115 @@ dev.off()
 ```{r pacifqntmod, fig.cap = "Estimates of the 80th percentile of individual sizes (cm2) by treatment and week for Olympia oyster.  Estimates are the 80th percentile conditional value from a quantile regression model of oyster size with week and treatment as predictors.  The estimates and confidence intervals are relative to the model intercept set as the 8.0 pH control treatment and week two.  Estimates that are significantly different than zero are in red.  The quantile regression model is based on individuals showing only positive growth throughout the experiment.", out.width = "70%", fig.align = 'center'}
 knitr::include_graphics('figs/pacifqntmod.jpg')
 ```
+
+## Survival estimates, between treatments
+
+[download](figs/survivaltreat.jpg)
+```{r, results = 'hide'}
+srvraw <- read.csv(here::here('data/raw/Weight_with dead but not multiple_Kelp_4_3.csv'), stringsAsFactors = F) %>% 
+  clean_names() %>% 
+  filter(species != '') %>% 
+  mutate(species = gsub('\\s*$', '', species)) %>% 
+  rename(
+    id = individual_id, 
+    jar = i_jar,
+    trt = treatment
+  ) %>% 
+  select(week, trt, jar, id, species, dead) %>% 
+  mutate(
+    dead = case_when(
+      dead %in% c('x', 'X') ~ 1, 
+      T ~ 0
+    ), 
+    trt = factor(trt, levels = trts$shrtlab)
+  )
+  
+srvdat <- srvraw %>% 
+  group_by(species) %>%
+  nest %>% 
+  mutate(
+    srvmod = purrr::map(data, function(x){
+      browser()
+      fit <- survfit(Surv(week, dead) ~ trt, data = x)
+      return(fit)
+      
+    }), 
+    srvdif = purrr::map(data, function(x){
+    
+      fit <- survdiff(Surv(week, dead) ~ trt, data = x)
+      return(fit)
+      
+    })
+  )
+
+srvplos <- srvdat %>% 
+  mutate(
+    plodat = purrr::map(srvmod, fortify)
+  ) %>% 
+  select(-data, -srvmod, -srvdif) %>% 
+  unnest(plodat)
+
+cols <- c('seagreen4', 'seagreen2', 'khaki4', 'khaki3', 'khaki1')
+names(cols) <- trts$shrtlab
+
+p <- ggplot(srvplos, aes(x = time, y = surv)) + 
+  geom_line(aes(colour = strata), size = 1.5) + 
+  geom_ribbon(aes(ymin = lower, ymax = upper), colour = NA, fill = 'lightgrey', alpha = 0.25) +
+  facet_grid(species ~ strata) +
+  scale_colour_manual('Treatment', values = cols, guide = F) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.x = element_blank(), 
+    legend.position = 'top'
+  ) + 
+  labs(
+    x = 'Week', 
+    y = '% survival', 
+    title = 'Survival estimates by treatment and species',
+    subtitle = 'Shaded region is 95% CI'
+  )
+
+jpeg('figs/survivaltreat.jpg', height = 5, width = 7, units = 'in', res = 300, family = 'serif')
+p
+dev.off()
+```
+
+```{r survivaltreat, fig.cap = "Survival estimates of oysters by species and treatment from the beginning to end of the six week exposure period.  Values are the approximate percentage of individuals surviving at each time step and are based on Kaplan-Meier estimates for right-censored data.", out.width = "70%", fig.align = 'center'}
+knitr::include_graphics('figs/survivaltreat.jpg')
+```
+
+## Survival estimates, between species
+
+[download](figs/survivalspecies.jpg)
+```{r, results = 'hide'}
+srvmod <- survfit(Surv(week, dead) ~ species, data = srvraw)
+
+srvplos <- fortify(srvmod)
+
+p <- ggplot(srvplos, aes(x = time, y = surv)) + 
+  geom_line(aes(colour = strata), size = 1.5) + 
+  geom_ribbon(aes(ymin = lower, ymax = upper), colour = NA, fill = 'lightgrey', alpha = 0.25) +
+  facet_grid( ~ strata) +
+  theme_minimal() +
+  theme(
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.x = element_blank(), 
+    legend.position = 'none'
+  ) + 
+  labs(
+    x = 'Week', 
+    y = '% survival', 
+    title = 'Survival estimates by species, across treatments',
+    subtitle = 'Shaded region is 95% CI'
+  )
+
+jpeg('figs/survivalspecies.jpg', height = 3, width = 4, units = 'in', res = 300, family = 'serif')
+p
+dev.off()
+```
+
+```{r survivalspeices, fig.cap = "Survival estimates of oysters by species from the beginning to end of the six week exposure period.  All treatments are aggregated across species and weeks.  Values are the approximate percentage of individuals surviving at each time step and are based on Kaplan-Meier estimates for right-censored data.", out.width = "50%", fig.align = 'center'}
+knitr::include_graphics('figs/survivalspecies.jpg')
+```
+
