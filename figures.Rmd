@@ -321,7 +321,7 @@ knitr::include_graphics('figs/olympqntmod.jpg')
 
 ## Pacfice, quantile size model
 
-[download](figs/olympqntmod.jpg)
+[download](figs/pacifqntmod.jpg)
 ```{r, results = 'hide'}
 p <- qntwkplos %>% 
   pull(qtplo) %>% 
