@@ -19,9 +19,11 @@ library(quantreg)
 library(janitor)
 library(survival)
 library(ggfortify)
+library(gghalves)
 
 data(bymods)
 data(wtmods)
+data(allexp)
 
 trts <- tibble(
   shrtlab = c("8.0C", "8.0A0.2", "7.7C", "7.7A0.2", "7.7A0.5"),
@@ -245,6 +247,47 @@ qntwkplos <- allind %>%
 ```
 
 # Figures {.tabset}
+
+## Growth variability
+
+[download](figs/growthvar.jpg)
+```{r, results = 'hide'}
+toplo <- allexp %>% 
+  filter(var %in% c('Final size (cm2)', 'Shell weight (g)', 'Tissue weight (g)')) %>% 
+  filter(week == 6) %>% 
+  mutate(trt = factor(trt, levels = c( "8.0C", "8.0A0.2", "7.7C", "7.7A0.2", "7.7A0.5")))
+
+cols <- c('seagreen4', 'seagreen2', 'khaki4', 'khaki3', 'khaki1')
+names(cols) <- trts$shrtlab
+
+p <- ggplot(toplo, aes(x = trt, y = val, fill = trt)) + 
+  geom_half_point_panel(pch = 21, transformation = position_jitter(width = 1, height = 0), alpha = 0.7) + 
+  geom_half_violin(colour = 'black') +
+  facet_grid(var ~ species, scales = 'free_y', switch = 'y') + 
+  scale_fill_manual('Treatment', values = cols, guide = F) +
+  theme_minimal() +  
+  theme(
+    legend.position = 'top', 
+    axis.title.y = element_blank(), 
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.x = element_blank(), 
+    panel.grid.minor.y = element_blank(), 
+    strip.placement = 'outside'
+    ) +
+  labs(
+    x = 'Treatment', 
+    title = 'Oyster growth characteristics by treatment', 
+    subtitle = 'Observations are for the final week of the experiment'
+  )
+
+jpeg('figs/growthvar.jpg', height = 7, width = 7, units = 'in', res = 300, family = 'serif')
+print(p)
+dev.off()
+```
+
+```{r growthvar, fig.cap = "Distribution of oyster growth characteristics in week six arranged by species and treatment.  The left half of values at each treatment show a density histogram and the right half shows measured values for individuals.", out.width = "80%", fig.align = 'center'}
+knitr::include_graphics('figs/growthvar.jpg')
+```
 
 ## Olympia week 4 weight model
 
