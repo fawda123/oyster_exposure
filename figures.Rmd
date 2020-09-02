@@ -23,7 +23,6 @@ library(gghalves)
 
 data(bymods)
 data(wtmods)
-data(allexp)
 
 trts <- tibble(
   shrtlab = c("8.0C", "8.0A0.2", "7.7C", "7.7A0.2", "7.7A0.5"),
@@ -252,8 +251,8 @@ qntwkplos <- allind %>%
 
 [download](figs/growthvar.jpg)
 ```{r, results = 'hide'}
-toplo <- allexp %>% 
-  filter(var %in% c('Final size (cm2)', 'Shell weight (g)', 'Tissue weight (g)')) %>% 
+toplo <- allind %>% 
+  filter(var %in% c('Final size (cm2)', 'Whole weight (g)')) %>% 
   filter(week == 6) %>% 
   mutate(trt = factor(trt, levels = c( "8.0C", "8.0A0.2", "7.7C", "7.7A0.2", "7.7A0.5")))
 
@@ -280,13 +279,85 @@ p <- ggplot(toplo, aes(x = trt, y = val, fill = trt)) +
     subtitle = 'Observations are for the final week of the experiment'
   )
 
-jpeg('figs/growthvar.jpg', height = 7, width = 7, units = 'in', res = 300, family = 'serif')
+jpeg('figs/growthvar.jpg', height = 6, width = 6, units = 'in', res = 300, family = 'serif')
 print(p)
 dev.off()
 ```
 
 ```{r growthvar, fig.cap = "Distribution of oyster growth characteristics in week six arranged by species and treatment.  The left half of values at each treatment show a density histogram and the right half shows measured values for individuals.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/growthvar.jpg')
+```
+
+## CDF curves
+
+[download](figs/cdfcrv.jpg)
+```{r, results = 'hide'}
+toplo <- allind %>% 
+  filter(var %in% c('Final size (cm2)', 'Whole weight (g)')) %>% 
+  mutate(trt = factor(trt, levels = c( "8.0C", "8.0A0.2", "7.7C", "7.7A0.2", "7.7A0.5")))
+
+cols <- c('seagreen4', 'seagreen2', 'khaki4', 'khaki3', 'khaki1')
+names(cols) <- trts$shrtlab
+
+toplo1 <- toplo %>% 
+  filter(species %in% 'Olympia') 
+toplo2 <- toplo %>% 
+  filter(species %in% 'Pacific')
+
+p1 <- ggplot(toplo1, aes(x = val, colour = trt)) + 
+  stat_ecdf(aes(colour = trt), size = 1) +
+  facet_grid(week ~ var, scales = 'free', switch = 'x') +
+  scale_colour_manual('Treatment', values = cols, guide = F) +
+  theme_minimal() +  
+  theme(
+    legend.position = 'top', 
+    axis.title.x = element_blank(), 
+    panel.grid.minor.x = element_blank(), 
+    panel.grid.minor.y = element_blank(), 
+    strip.placement = 'outside', 
+    panel.background = element_rect(fill = 'grey95', colour = NA), 
+    panel.border = element_blank()
+    ) +
+  labs(
+    x = 'Treatment', 
+    y = 'Cumulative frequency', 
+    title = 'Cumulative distribution of growth characteristics', 
+    subtitle = '(a) Olympia'
+  )
+
+p2 <- ggplot(toplo2, aes(x = val, colour = trt)) + 
+  stat_ecdf(aes(colour = trt), size = 1) +
+  facet_grid(week ~ var, scales = 'free', switch = 'x') +
+  scale_colour_manual('Treatment', values = cols) +
+  theme_minimal() +  
+  theme(
+    axis.title.x = element_blank(), 
+    panel.grid.minor.x = element_blank(), 
+    panel.grid.minor.y = element_blank(), 
+    strip.placement = 'outside', 
+    panel.background = element_rect(fill = 'grey95', colour = NA), 
+    panel.border = element_blank(), 
+    # legend.position = 'top', 
+    legend.title = element_blank(),
+    plot.margin = margin(t=2,1,1,1, "lines"), 
+    legend.direction = "horizontal",
+    legend.position = c(0.5, 1.15)
+    ) +
+  labs(
+    x = 'Treatment', 
+    y = 'Cumulative frequency', 
+    subtitle = '(b) Pacific'
+  )
+
+p <- p1 + p2 + plot_layout(ncol = 1)
+
+jpeg('figs/cdfcrv.jpg', height = 9, width = 6, units = 'in', res = 300, family = 'serif')
+print(p)
+dev.off()
+```
+
+```{r cdfcrv, fig.cap = "Cumulative distribution curves for growth characteristics (size, whole weight) of (a) Olympia and (b) Pacific oysters by experiment week (row) and treatments (line colors). ", out.width = "70%", fig.align = 'center'}
+knitr::include_graphics('figs/cdfcrv.jpg')
 ```
 
 ## Olympia week 4 weight model
