@@ -1545,3 +1545,28 @@ ggplot(allind, aes(x = week, y = val, group = species)) +
   )
 ```
 
+Some stats comparing species:
+
+```{r}
+allind %>% 
+  group_by(var) %>% 
+  nest() %>% 
+  mutate(
+    cmp = purrr::map(data, function(x){
+      lm(val ~ species, x) %>% summary
+    })
+  ) %>% 
+  select(var, cmp) %>% 
+  deframe
+```
+
+Some stats comparing growth rates:
+
+```{r}
+allind %>% 
+  filter(var %in% 'Final size (cm2)') %>% 
+  lm(val ~ week * species, .) %>% 
+  summary
+```
+
+
