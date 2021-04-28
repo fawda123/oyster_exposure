@@ -42,6 +42,7 @@ dissdat <- read.csv('data/raw/SEM scoring datasheet_MRVERSION.csv') %>%
     .groups = 'drop'
     ) %>% 
   mutate(
+    val = val / 3,
     jar = factor(jar),
     trt = factor(trt, levels = c("7.7C", "7.7A0.2", "7.7A0.5", "8.0C", "8.0A0.2"))
   )
@@ -107,7 +108,7 @@ dissmodsall <- dissdat %>%
       n <- mixmod@frame %>% nrow
       
       # labels
-      subttl <- paste0('Total dissolution, ', species, ' oyster')
+      subttl <- paste0('Standardized dissolution, ', species, ' oyster')
       captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
       
       # mean esimate plots
@@ -188,7 +189,7 @@ dissmods7780 <- dissdat %>%
       n <- mixmod@frame %>% nrow
       
       # labels
-      subttl <- paste0('Total dissolution, ', species, ' oyster')
+      subttl <- paste0('Standardized dissolution, ', species, ' oyster')
       captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
       
       # mean esimate plots
@@ -269,7 +270,7 @@ dissmods77 <- dissdat %>%
       n <- mixmod@frame %>% nrow
       
       # labels
-      subttl <- paste0('Total dissolution, ', species, ' oyster')
+      subttl <- paste0('Standardized dissolution, ', species, ' oyster')
       captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
       
       # mean esimate plots
@@ -350,7 +351,7 @@ dissmods80 <- dissdat %>%
       n <- mixmod@frame %>% nrow
       
       # labels
-      subttl <- paste0('Total dissolution, ', species, ' oyster')
+      subttl <- paste0('Standardized dissolution, ', species, ' oyster')
       captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
       
       # mean esimate plots
@@ -431,7 +432,7 @@ dissmods7780a <- dissdat %>%
       n <- mixmod@frame %>% nrow
       
       # labels
-      subttl <- paste0('Total dissolution, ', species, ' oyster')
+      subttl <- paste0('Standardized dissolution, ', species, ' oyster')
       captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
       
       # mean esimate plots

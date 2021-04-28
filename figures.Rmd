@@ -20,6 +20,7 @@ library(janitor)
 library(survival)
 library(ggfortify)
 library(gghalves)
+library(modelbased)
 
 data(bymods)
 data(wtmods)
@@ -243,6 +244,57 @@ qntwkplos <- allind %>%
       
     })
   )
+
+# dissolution data
+dissdat <- read.csv('data/raw/SEM scoring datasheet_MRVERSION.csv') %>% 
+  clean_names() %>% 
+  filter(week != 0) %>% 
+  select(
+    jar, 
+    id = individual_id, 
+    species, 
+    week, 
+    trt = treatment,
+    rep, 
+    scr = dissolution_score1
+  ) %>% 
+  group_by(jar, id, species, week, trt) %>% 
+  summarise(
+    val = mean(scr, na.rm = T),
+    .groups = 'drop'
+    ) %>% 
+  mutate(
+    val / 3, 
+    jar = factor(jar),
+    trt = factor(trt, levels = c("7.7C", "7.7A0.2", "7.7A0.5", "8.0C", "8.0A0.2"))
+  )
+
+# treatment colors
+cls <- RColorBrewer::brewer.pal(6, 'BrBG')
+cls <- c(cls[1:3], cls[c(6, 4)])
+names(cls) <- levels(dissdat$trt)
+
+# all comparisons
+dissmodsall <- dissdat %>%
+  group_by(species) %>% 
+  nest %>% 
+  mutate(
+    mixmod = purrr::map(data, function(x){
+
+      tomod <- x %>% 
+        mutate(
+          week = factor(week), 
+          jar = fct_drop(jar), 
+          trt = fct_drop(trt)
+        )
+      
+      out <- lmerTest::lmer(val ~ trt * week + (1|jar), data = tomod)
+      
+      return(out)
+      
+    })
+  )
+
 ```
 
 # Figures {.tabset}
@@ -559,7 +611,53 @@ p
 dev.off()
 ```
 
-```{r survivalspeices, fig.cap = "Survival estimates of oysters by species from the beginning to end of the six week exposure period.  All treatments are aggregated across species and weeks.  Values are the approximate percentage of individuals surviving at each time step and are based on Kaplan-Meier estimates for right-censored data.", out.width = "50%", fig.align = 'center'}
+```{r survivalspecies, fig.cap = "Survival estimates of oysters by species from the beginning to end of the six week exposure period.  All treatments are aggregated across species and weeks.  Values are the approximate percentage of individuals surviving at each time step and are based on Kaplan-Meier estimates for right-censored data.", out.width = "50%", fig.align = 'center'}
 knitr::include_graphics('figs/survivalspecies.jpg')
 ```
 
+## Dissolution models
+
+[download](figs/dissmods.jpg)
+```{r, results = 'hide'}
+
+# sample size
+pacn <- dissmodsall %>% filter(species == 'Pacific') %>% pull(mixmod) %>% .[[1]] %>% .@frame %>% nrow
+olyn <- dissmodsall %>% filter(species == 'Olympia') %>% pull(mixmod) %>% .[[1]] %>% .@frame %>% nrow
+captns <- paste0('n = ', pacn , ' (Pacific), ', olyn, ' (Olympia)')
+
+# Pacific estimates
+mnsval <- dissmodsall %>% 
+  select(species, mixmod) %>% 
+  mutate(
+    mixmod = purrr::map(mixmod, estimate_means)
+    ) %>% 
+  unnest('mixmod') %>% 
+  mutate(
+    species = factor(species, levels = c('Pacific', 'Olympia'), labels = c('(a) Pacific oyster', '(b) Olympia oyster'))
+  )
+
+# mean esimate plots
+p <- ggplot(mnsval, aes(x = week, y = Mean, group = trt, colour = trt, fill = trt)) + 
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
+  geom_line(position = position_dodge(0.3)) + 
+  geom_point(size = 3, position = position_dodge(0.3), pch = 21, colour = 'black') + 
+  labs(x = 'Exposure week', y = 'Mean dissolution (+/- 95% CI)', caption = captns) + 
+  facet_wrap(~species, ncol = 2) +
+  scale_colour_manual(values = cls) + 
+  scale_fill_manual(values = cls) + 
+  theme_minimal() + 
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(), 
+    legend.title = element_blank(), 
+    strip.text = element_text(hjust = 0, size = 12), 
+    plot.caption = element_text(face = 'italic')
+  )
+
+jpeg('figs/dissmod.jpg', height = 4, width = 7, units = 'in', res = 300, family = 'serif')
+p
+dev.off()
+```
+```{r dissmod, fig.cap = "Model estimates of mean dissolution (+/- 95% confidence intervals) for each species, treatment and week of experimental exposure.  Estimate are based on two-way analysis of variance models with an interaction between week and treatment, using jar as a random effect.  Confidence intervals that do not include zero have statistically significant dissolution and treatments/weeks that have non-overlapping confidence intervals can be considered statistically different.  Dissolution is expressed as a relative total from 0-1 based on descriptions in the methods.", out.width = "90%", fig.align = 'center'}
+knitr::include_graphics('figs/dissmod.jpg')
+```
