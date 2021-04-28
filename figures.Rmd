@@ -617,7 +617,7 @@ knitr::include_graphics('figs/survivalspecies.jpg')
 
 ## Dissolution models
 
-[download](figs/dissmods.jpg)
+[download](figs/dissmod.jpg)
 ```{r, results = 'hide'}
 
 # sample size
