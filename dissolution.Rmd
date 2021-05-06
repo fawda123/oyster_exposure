@@ -845,6 +845,25 @@ dat %>%
   pull(plomod)
 ```
 
+### Species together
+
+```{r}
+mixmod <- lmerTest::lmer(val ~ trt * week * species + (1|jar), data = dissdat)
+anomod <- anova(mixmod)
+mixmodnoint <- lmerTest::lmer(val ~ trt + week + species + (1|jar), data = dissdat)
+anomodnoint <- anova(mixmodnoint)
+
+anomodnoint %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Dissolution vs week + treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+anomod %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Dissolution vs week x treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
 ## 7.7C, 8.0C {.tabset .tabset-pills}
 
 ### Olympia oyster
