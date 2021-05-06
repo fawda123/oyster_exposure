@@ -644,7 +644,7 @@ knitr::include_graphics('figs/survivalspecies.jpg')
 
 ## Dissolution models - week by trt
 
-[download](figs/dissmod.jpg)
+[download](figs/dissmod1.jpg)
 ```{r, results = 'hide'}
 
 # sample size
@@ -691,6 +691,7 @@ knitr::include_graphics('figs/dissmod1.jpg')
 
 ## Dissolution models - trt only
 
+[download](figs/dissmod2.jpg)
 ```{r, results = 'hide'}
 
 mrg <- 0
