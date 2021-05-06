@@ -295,6 +295,33 @@ dissmodsall <- dissdat %>%
     })
   )
 
+# fit separate dissolution mixed models by species, week not tested
+dissbymods <- dissdat %>%
+  group_by(species) %>% 
+  nest %>% 
+  mutate(
+    mixmod = pmap(list(data), function(data){
+      
+      tomod <- data %>%
+        mutate(
+          trt = fct_drop(trt),
+          jar = fct_drop(jar)
+        )
+
+      out <- lmerTest::lmer(val ~ trt + (1|jar), data = tomod)
+      
+      return(out)
+      
+    }),
+    anomod = map(mixmod, function(x){
+    
+      out <- anova(x)
+      
+      return(out)
+      
+    })
+  )
+
 ```
 
 # Figures {.tabset}
@@ -615,7 +642,7 @@ dev.off()
 knitr::include_graphics('figs/survivalspecies.jpg')
 ```
 
-## Dissolution models
+## Dissolution models - week by trt
 
 [download](figs/dissmod.jpg)
 ```{r, results = 'hide'}
@@ -654,10 +681,146 @@ p <- ggplot(mnsval, aes(x = week, y = Mean, group = trt, colour = trt, fill = tr
     plot.caption = element_text(face = 'italic')
   )
 
-jpeg('figs/dissmod.jpg', height = 4, width = 7, units = 'in', res = 300, family = 'serif')
+jpeg('figs/dissmod1.jpg', height = 4, width = 7, units = 'in', res = 300, family = 'serif')
 p
 dev.off()
 ```
-```{r dissmod, fig.cap = "Model estimates of mean dissolution (+/- 95% confidence intervals) for each species, treatment and week of experimental exposure.  Estimate are based on two-way analysis of variance models with an interaction between week and treatment, using jar as a random effect.  Confidence intervals that do not include zero have statistically significant dissolution and treatments/weeks that have non-overlapping confidence intervals can be considered statistically different.  Dissolution is expressed as a relative total from 0-1 based on descriptions in the methods.", out.width = "90%", fig.align = 'center'}
-knitr::include_graphics('figs/dissmod.jpg')
+```{r dissmod1, fig.cap = "Model estimates of mean dissolution (+/- 95% confidence intervals) for each species, treatment and week of experimental exposure.  Estimates are based on two-way analysis of variance models with an interaction between week and treatment, using jar as a random effect.  Confidence intervals that do not include zero have statistically significant dissolution and treatments/weeks that have non-overlapping confidence intervals can be considered statistically different.  Dissolution is expressed as a relative total from 0-1 based on descriptions in the methods.", out.width = "90%", fig.align = 'center'}
+knitr::include_graphics('figs/dissmod1.jpg')
+```
+
+## Dissolution models - trt only
+
+```{r, results = 'hide'}
+
+mrg <- 0
+
+##
+# Pacific oyster plots
+
+species <- 'Pacific'
+mixmod <- dissmodsall %>% 
+  filter(species == !!species) %>% 
+  pull(mixmod) %>% 
+  .[[1]]
+
+# estimates
+mnsval <- estimate_means(mixmod, 'trt')
+cnsval <- estimate_contrasts(mixmod, 'trt') %>% 
+  mutate(
+    sig = ifelse(p < 0.05, 'sig', 'notsig'),
+    sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'significant'))
+  ) %>% 
+  unite('Contrast', Level1, Level2, sep = '-')
+
+# sample size
+n <- mixmod@frame %>% nrow
+
+# labels
+ttl <- paste0('(a) ', species, ' oyster')
+captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+
+# mean esimate plots
+p1a <- ggplot(mnsval, aes(x = trt, y = Mean)) + 
+  geom_point(size = 3) + 
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), colour = 'black', size = 1) + 
+  labs(x = NULL, y = 'Estimated means (+/- 95% CI)', subtitle = 'Treatment estimates', title = ttl) + 
+  theme_ipsum(
+    plot_title_size = 14,
+    plot_margin = margin(rep(mrg, 4)),
+  ) + 
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  ) + 
+  coord_flip()
+
+# contrast plots
+p2a <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) + 
+  geom_point(aes(colour = sig), size = 3) + 
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = sig), size = 1) + 
+  labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', subtitle = 'Treatment differences') +
+  theme_ipsum(
+    plot_title_size = 14,
+    plot_margin = margin(rep(mrg, 4)),
+  ) + 
+  theme(
+    legend.title = element_blank(), 
+    legend.position = 'bottom', 
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  ) +
+  geom_hline(yintercept = 0, linetype = 'dotted', size = 1) + 
+  scale_colour_manual(drop = F, values = c('black', 'tomato1')) + 
+  coord_flip()
+
+## 
+# Olympic oyster plots
+
+species <- 'Olympia'
+mixmod <- dissmodsall %>% 
+  filter(species == !!species) %>% 
+  pull(mixmod) %>% 
+  .[[1]]
+
+# estimates
+mnsval <- estimate_means(mixmod, 'trt')
+cnsval <- estimate_contrasts(mixmod, 'trt') %>% 
+  mutate(
+    sig = ifelse(p < 0.05, 'sig', 'notsig'),
+    sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'significant'))
+  ) %>% 
+  unite('Contrast', Level1, Level2, sep = '-')
+
+# sample size
+n <- mixmod@frame %>% nrow
+
+# labels
+ttl <- paste0('(b) ', species, ' oyster')
+captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+
+# mean esimate plots
+p1b <- ggplot(mnsval, aes(x = trt, y = Mean)) + 
+  geom_point(size = 3) + 
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), colour = 'black', size = 1) + 
+  labs(x = NULL, y = 'Estimated means (+/- 95% CI)', subtitle = 'Treatment estimates', title = ttl) + 
+  theme_ipsum(
+    plot_title_size = 14,
+    plot_margin = margin(rep(mrg, 4)),
+    ) + 
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  ) + 
+  coord_flip()
+
+# contrast plots
+p2b <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) + 
+  geom_point(aes(colour = sig), size = 3) + 
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = sig), size = 1) + 
+  labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', subtitle = 'Treatment differences',
+       caption = captns) +
+  theme_ipsum(
+    plot_title_size = 14,
+    plot_margin = margin(rep(mrg, 4)),
+  ) + 
+  theme(
+    legend.title = element_blank(), 
+    legend.position = 'none', 
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  ) +
+  geom_hline(yintercept = 0, linetype = 'dotted', size = 1) + 
+  scale_colour_manual(drop = F, values = c('black', 'tomato1')) + 
+  coord_flip()
+
+# final plot
+p <- p1a + p2a + p1b + p2b + plot_layout(ncol  = 2)   
+  
+jpeg('figs/dissmod2.jpg', height = 7.5, width = 8, units = 'in', res = 300, family = 'serif')
+p
+dev.off()    
+```
+```{r dissmod2, fig.cap = "Model estimates of mean dissolution (+/- 95% confidence intervals) by treatment for (a) Pacific and (b) Olympia oysters.  Exposure week was not included as a model predictor becuase it was not significant in earlier models. Estimates are based on linear mixed effects models to test for differences in dissolution by treatment, using jar as a random effect. The left plots show mean dissolution estimates from each model and the right plots show post-hoc pairwise comparisons of mean differences between treatments.  Confidence intervals in the right plot that do not include zero indicate pairs of treatments with significantly different dissolution means. Dissolution is expressed as a relative total from 0-1 based on descriptions in the methods.", out.width = "80%", fig.align = 'center'}
+knitr::include_graphics('figs/dissmod2.jpg')
 ```
