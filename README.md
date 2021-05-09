@@ -10,6 +10,8 @@ Dissolution results: <https://fawda123.github.io/oyster_exposure/dissolution.htm
 
 Calcification results: <https://fawda123.github.io/oyster_exposure/calcification.html>
 
+Clearance results: <https://fawda123.github.io/oyster_exposure/clearance.html>
+
 Quantile regression models: <https://fawda123.github.io/oyster_exposure/qntmods.html>
 
 Select figures: <https://fawda123.github.io/oyster_exposure/figures.html>
