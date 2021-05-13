@@ -205,6 +205,330 @@ bymods6 <- clrcdat %>%
     })
   )
 
+# fit separate mixed models by species, week 6 only
+# 7.7C, 8.0C
+bymods6_7780 <- clrcdat %>%
+  filter(week == 6) %>% 
+  filter(trt %in% c('7.7C', '8.0C')) %>% 
+  mutate(trt = fct_drop(trt)) %>% 
+  group_by(species) %>% 
+  nest %>% 
+  mutate(
+    mixmod = pmap(list(data), function(data){
+      
+      tomod <- data %>%
+        mutate(
+          trt = fct_drop(trt)
+        )
+      
+      out <- lm(val ~ trt, data = tomod)
+      
+      return(out)
+      
+    }),
+    anomod = map(mixmod, function(x){
+      
+      out <- anova(x)
+      
+      return(out)
+      
+    }), 
+    plomod = pmap(list(species, mixmod), function(species, mixmod){
+
+      # estimates
+      mnsval <- estimate_means(mixmod, 'trt')
+      cnsval <- estimate_contrasts(mixmod, 'trt') %>% 
+        mutate(
+          sig = ifelse(p < 0.05, 'sig', 'notsig'),
+          sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'significant'))
+        ) %>% 
+        unite('Contrast', Level1, Level2, sep = '-')
+      
+      # sample size
+      n <- nrow(model.frame(mixmod))
+      
+      # labels
+      subttl <- paste0(species, ' oyster')
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      
+      # mean esimate plots
+      p1 <- ggplot(mnsval, aes(x = trt, y = Mean)) + 
+        geom_point(size = 3) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high), colour = 'black', size = 1) + 
+        labs(x = NULL, y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl) + 
+        theme_ipsum() + 
+        theme(
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) + 
+        coord_flip()
+      
+      # contrast plots
+      p2 <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) + 
+        geom_point(aes(colour = sig), size = 3) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = sig), size = 1) + 
+        labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', title = 'Treatment differences', subtitle = subttl,
+             caption = captns) +
+        theme_ipsum() + 
+        theme(
+          legend.title = element_blank(), 
+          legend.position = 'bottom', 
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) +
+        geom_hline(yintercept = 0, linetype = 'dotted', size = 1) + 
+        scale_colour_manual(drop = F, values = c('black', 'tomato1')) + 
+        coord_flip()
+      
+      p1 + p2 + plot_layout(ncol  = 2)   
+      
+      
+    })
+  )
+
+# fit separate mixed models by species, week 6 only
+# 7.7C, 7.7A0.2, 7.7A0.5
+bymods6_77 <- clrcdat %>%
+  filter(week == 6) %>% 
+  filter(trt %in% c('7.7C', '7.7A0.2', '7.7A0.5')) %>% 
+  mutate(trt = fct_drop(trt)) %>% 
+  group_by(species) %>% 
+  nest %>% 
+  mutate(
+    mixmod = pmap(list(data), function(data){
+      
+      tomod <- data %>%
+        mutate(
+          trt = fct_drop(trt)
+        )
+      
+      out <- lm(val ~ trt, data = tomod)
+      
+      return(out)
+      
+    }),
+    anomod = map(mixmod, function(x){
+      
+      out <- anova(x)
+      
+      return(out)
+      
+    }), 
+    plomod = pmap(list(species, mixmod), function(species, mixmod){
+
+      # estimates
+      mnsval <- estimate_means(mixmod, 'trt')
+      cnsval <- estimate_contrasts(mixmod, 'trt') %>% 
+        mutate(
+          sig = ifelse(p < 0.05, 'sig', 'notsig'),
+          sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'significant'))
+        ) %>% 
+        unite('Contrast', Level1, Level2, sep = '-')
+      
+      # sample size
+      n <- nrow(model.frame(mixmod))
+      
+      # labels
+      subttl <- paste0(species, ' oyster')
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      
+      # mean esimate plots
+      p1 <- ggplot(mnsval, aes(x = trt, y = Mean)) + 
+        geom_point(size = 3) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high), colour = 'black', size = 1) + 
+        labs(x = NULL, y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl) + 
+        theme_ipsum() + 
+        theme(
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) + 
+        coord_flip()
+      
+      # contrast plots
+      p2 <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) + 
+        geom_point(aes(colour = sig), size = 3) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = sig), size = 1) + 
+        labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', title = 'Treatment differences', subtitle = subttl,
+             caption = captns) +
+        theme_ipsum() + 
+        theme(
+          legend.title = element_blank(), 
+          legend.position = 'bottom', 
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) +
+        geom_hline(yintercept = 0, linetype = 'dotted', size = 1) + 
+        scale_colour_manual(drop = F, values = c('black', 'tomato1')) + 
+        coord_flip()
+      
+      p1 + p2 + plot_layout(ncol  = 2)   
+      
+      
+    })
+  )
+
+# fit separate mixed models by species, week 6 only
+# 7.7C, 7.7A0.5
+bymods6_77775 <- clrcdat %>%
+  filter(week == 6) %>% 
+  filter(trt %in% c('7.7C', '7.7A0.5')) %>% 
+  mutate(trt = fct_drop(trt)) %>% 
+  group_by(species) %>% 
+  nest %>% 
+  mutate(
+    mixmod = pmap(list(data), function(data){
+      
+      tomod <- data %>%
+        mutate(
+          trt = fct_drop(trt)
+        )
+      
+      out <- lm(val ~ trt, data = tomod)
+      
+      return(out)
+      
+    }),
+    anomod = map(mixmod, function(x){
+      
+      out <- anova(x)
+      
+      return(out)
+      
+    }), 
+    plomod = pmap(list(species, mixmod), function(species, mixmod){
+
+      # estimates
+      mnsval <- estimate_means(mixmod, 'trt')
+      cnsval <- estimate_contrasts(mixmod, 'trt') %>% 
+        mutate(
+          sig = ifelse(p < 0.05, 'sig', 'notsig'),
+          sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'significant'))
+        ) %>% 
+        unite('Contrast', Level1, Level2, sep = '-')
+      
+      # sample size
+      n <- nrow(model.frame(mixmod))
+      
+      # labels
+      subttl <- paste0(species, ' oyster')
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      
+      # mean esimate plots
+      p1 <- ggplot(mnsval, aes(x = trt, y = Mean)) + 
+        geom_point(size = 3) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high), colour = 'black', size = 1) + 
+        labs(x = NULL, y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl) + 
+        theme_ipsum() + 
+        theme(
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) + 
+        coord_flip()
+      
+      # contrast plots
+      p2 <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) + 
+        geom_point(aes(colour = sig), size = 3) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = sig), size = 1) + 
+        labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', title = 'Treatment differences', subtitle = subttl,
+             caption = captns) +
+        theme_ipsum() + 
+        theme(
+          legend.title = element_blank(), 
+          legend.position = 'bottom', 
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) +
+        geom_hline(yintercept = 0, linetype = 'dotted', size = 1) + 
+        scale_colour_manual(drop = F, values = c('black', 'tomato1')) + 
+        coord_flip()
+      
+      p1 + p2 + plot_layout(ncol  = 2)   
+      
+      
+    })
+  )
+
+# fit separate mixed models by species, week 6 only
+# 8.0C, 7.7A0.5
+bymods6_80775 <- clrcdat %>%
+  filter(week == 6) %>% 
+  filter(trt %in% c('8.0C', '7.7A0.5')) %>% 
+  mutate(trt = fct_drop(trt)) %>% 
+  group_by(species) %>% 
+  nest %>% 
+  mutate(
+    mixmod = pmap(list(data), function(data){
+      
+      tomod <- data %>%
+        mutate(
+          trt = fct_drop(trt)
+        )
+      
+      out <- lm(val ~ trt, data = tomod)
+      
+      return(out)
+      
+    }),
+    anomod = map(mixmod, function(x){
+      
+      out <- anova(x)
+      
+      return(out)
+      
+    }), 
+    plomod = pmap(list(species, mixmod), function(species, mixmod){
+
+      # estimates
+      mnsval <- estimate_means(mixmod, 'trt')
+      cnsval <- estimate_contrasts(mixmod, 'trt') %>% 
+        mutate(
+          sig = ifelse(p < 0.05, 'sig', 'notsig'),
+          sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'significant'))
+        ) %>% 
+        unite('Contrast', Level1, Level2, sep = '-')
+      
+      # sample size
+      n <- nrow(model.frame(mixmod))
+      
+      # labels
+      subttl <- paste0(species, ' oyster')
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      
+      # mean esimate plots
+      p1 <- ggplot(mnsval, aes(x = trt, y = Mean)) + 
+        geom_point(size = 3) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high), colour = 'black', size = 1) + 
+        labs(x = NULL, y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl) + 
+        theme_ipsum() + 
+        theme(
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) + 
+        coord_flip()
+      
+      # contrast plots
+      p2 <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) + 
+        geom_point(aes(colour = sig), size = 3) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = sig), size = 1) + 
+        labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', title = 'Treatment differences', subtitle = subttl,
+             caption = captns) +
+        theme_ipsum() + 
+        theme(
+          legend.title = element_blank(), 
+          legend.position = 'bottom', 
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) +
+        geom_hline(yintercept = 0, linetype = 'dotted', size = 1) + 
+        scale_colour_manual(drop = F, values = c('black', 'tomato1')) + 
+        coord_flip()
+      
+      p1 + p2 + plot_layout(ncol  = 2)   
+      
+      
+    })
+  )
+
 # all comparisons
 clrcdatmodsall <- clrcdat %>%
   group_by(species) %>% 
@@ -281,38 +605,236 @@ clrcdatmodsall <- clrcdat %>%
       
     })
   )
-
 ```
 
-## Treatment effects only, all weeks combined {.tabset .tabset-pills}
+## All treatments, no weeks {.tabset .tabset-pills}
 
 ### Olympia oyster
 
+```{r}
+dat <- bymods %>% 
+  filter(species == 'Olympia')
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
 ```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
-bymods %>% filter(species == 'Olympia') %>% pull(plomod)
+dat %>% pull(plomod)
 ```
 
 ### Pacific oyster
 
-```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
-bymods %>% filter(species == 'Pacific') %>% pull(plomod)
+```{r}
+dat <- bymods %>% 
+  filter(species == 'Pacific')
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
 ```
 
-## Treatment effects only, week six only {.tabset .tabset-pills}
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dat %>% pull(plomod)
+```
+
+## All treatments, week six only {.tabset .tabset-pills}
 
 ### Olympia oyster
 
+```{r}
+dat <- bymods6 %>% 
+  filter(species == 'Olympia')
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
 ```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
-bymods6 %>% filter(species == 'Olympia') %>% pull(plomod)
+dat %>% pull(plomod)
 ```
 
 ### Pacific oyster
 
-```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
-bymods6 %>% filter(species == 'Pacific') %>% pull(plomod)
+```{r}
+dat <- bymods6 %>% filter(species == 'Pacific')
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
 ```
 
-## All treatments {.tabset .tabset-pills}
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dat %>% pull(plomod)
+```
+
+## 7.7C, 8.0C, week six only {.tabset .tabset-pills}
+
+### Olympia oyster
+
+```{r}
+dat <- bymods6_7780 %>% 
+  filter(species == 'Olympia')
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dat %>% pull(plomod)
+```
+
+### Pacific oyster
+
+```{r}
+dat <- bymods6_7780 %>% 
+  filter(species == 'Pacific')
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dat %>% pull(plomod)
+```
+
+## 7.7C, 7.7A0.2, 7.7A0.5, week six only {.tabset .tabset-pills}
+
+### Olympia oyster
+
+```{r}
+dat <- bymods6_77 %>% 
+  filter(species == 'Olympia')
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dat %>% pull(plomod)
+```
+
+### Pacific oyster
+
+```{r}
+dat <- bymods6_77 %>% 
+  filter(species == 'Pacific')
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dat %>% pull(plomod)
+```
+
+## 7.7C, 7.7A0.5, week six only {.tabset .tabset-pills}
+
+### Olympia oyster
+
+```{r}
+dat <- bymods6_77775 %>% 
+  filter(species == 'Olympia')
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dat %>% pull(plomod)
+```
+
+### Pacific oyster
+
+```{r}
+dat <- bymods6_77775 %>% 
+  filter(species == 'Pacific')
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dat %>% pull(plomod)
+```
+
+## 8.0C, 7.7A0.5, week six only {.tabset .tabset-pills}
+
+### Olympia oyster
+
+```{r}
+dat <- bymods6_80775 %>% 
+  filter(species == 'Olympia')
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dat %>% pull(plomod)
+```
+
+### Pacific oyster
+
+```{r}
+dat <- bymods6_80775 %>% 
+  filter(species == 'Pacific')
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
+dat %>% pull(plomod)
+```
+
+## Treatment x week {.tabset .tabset-pills}
 
 ### Olympia oyster
 
