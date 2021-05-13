@@ -607,7 +607,7 @@ clrcdatmodsall <- clrcdat %>%
   )
 ```
 
-## All treatments, no weeks {.tabset .tabset-pills}
+## Treatment effects only, all weeks combined {.tabset .tabset-pills}
 
 ### Olympia oyster
 
@@ -643,6 +643,79 @@ dat %>%
 
 ```{r, fig.height = 5, fig.width = 10, out.width = '90%', results = 'hide'}
 dat %>% pull(plomod)
+```
+
+## All treatments x week {.tabset .tabset-pills}
+
+### Olympia oyster
+
+```{r}
+dat <- clrcdatmodsall %>% 
+  filter(species == 'Olympia')
+
+dat %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs week + treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs week x treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+### Pacific oyster
+
+```{r}
+dat <- clrcdatmodsall %>% 
+  filter(species == 'Pacific')
+
+dat %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs week + treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs week x treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+### Species together
+
+```{r}
+mixmodnoint <- lm(val ~ trt + week + species, data = clrcdat)
+anomodnoint <- anova(mixmodnoint)
+mixmod<- lm(val ~ trt * week * species, data = clrcdat)
+anomod <- anova(mixmod)
+
+anomodnoint %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs week + treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+anomod %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs week x treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
 ```
 
 ## All treatments, week six only {.tabset .tabset-pills}
@@ -834,75 +907,3 @@ dat %>%
 dat %>% pull(plomod)
 ```
 
-## Treatment x week {.tabset .tabset-pills}
-
-### Olympia oyster
-
-```{r}
-dat <- clrcdatmodsall %>% 
-  filter(species == 'Olympia')
-
-dat %>% 
-  pull(anomodnoint) %>% 
-  .[[1]] %>% 
-  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs week + treatment') %>%
-  kable_styling(full_width = T, font_size = 14) %>% 
-  HTML
-
-dat %>% 
-  pull(anomod) %>% 
-  .[[1]] %>% 
-  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs week x treatment') %>%
-  kable_styling(full_width = T, font_size = 14) %>% 
-  HTML
-```
-
-```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
-dat %>% 
-  pull(plomod)
-```
-
-### Pacific oyster
-
-```{r}
-dat <- clrcdatmodsall %>% 
-  filter(species == 'Pacific')
-
-dat %>% 
-  pull(anomodnoint) %>% 
-  .[[1]] %>% 
-  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs week + treatment') %>%
-  kable_styling(full_width = T, font_size = 14) %>% 
-  HTML
-
-dat %>% 
-  pull(anomod) %>% 
-  .[[1]] %>% 
-  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs week x treatment') %>%
-  kable_styling(full_width = T, font_size = 14) %>% 
-  HTML
-```
-
-```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
-dat %>% 
-  pull(plomod)
-```
-
-### Species together
-
-```{r}
-mixmodnoint <- lm(val ~ trt + week + species, data = clrcdat)
-anomodnoint <- anova(mixmodnoint)
-mixmod<- lm(val ~ trt * week * species, data = clrcdat)
-anomod <- anova(mixmod)
-
-anomodnoint %>% 
-  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs week + treatment') %>%
-  kable_styling(full_width = T, font_size = 14) %>% 
-  HTML
-
-anomod %>% 
-  knitr::kable(format = 'html', digits = 2, caption = 'Clearance vs week x treatment') %>%
-  kable_styling(full_width = T, font_size = 14) %>% 
-  HTML
-```

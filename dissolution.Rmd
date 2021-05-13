@@ -694,6 +694,168 @@ dissmods80775 <- dissdat %>%
       
     })
   )
+
+# 7.7A0.2, 8.0A0.2
+dissmods772802 <- dissdat %>%
+  filter(trt %in% c('7.7A0.2', '8.0A0.2')) %>% 
+  mutate(trt = fct_drop(trt)) %>% 
+  group_by(species) %>% 
+  nest %>% 
+  mutate(
+    mixmod = purrr::map(data, function(x){
+
+      tomod <- x %>% 
+        mutate(
+          week = factor(week), 
+          jar = fct_drop(jar), 
+          trt = fct_drop(trt)
+        )
+      
+      out <- lmerTest::lmer(val ~ trt * week + (1|jar), data = tomod)
+      
+      return(out)
+      
+    }),
+    mixmodnoint = purrr::map(data, function(x){
+      
+      tomod <- x %>% 
+        mutate(
+          week = factor(week), 
+          jar = fct_drop(jar), 
+          trt = fct_drop(trt)
+        )
+    
+      out <- lmerTest::lmer(val ~ trt + week + (1|jar), data = tomod)
+      
+      return(out)
+      
+    }),
+    anomod = purrr::map(mixmod, function(x){
+      
+      out <- anova(x)
+      
+      return(out)
+      
+    }), 
+    anomodnoint = purrr::map(mixmodnoint, function(x){
+      
+      out <- anova(x)
+      
+      return(out)
+      
+    }), 
+    plomod = purrr::pmap(list(species, mixmod), function(species, mixmod){
+
+      # estimates
+      mnsval <- estimate_means(mixmod)
+      
+      # sample size
+      n <- mixmod@frame %>% nrow
+      
+      # labels
+      subttl <- paste0('Standardized dissolution, ', species, ' oyster')
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      
+      # mean esimate plots
+      p1 <- ggplot(mnsval, aes(x = week, y = Mean, group = trt, colour = trt, fill = trt)) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
+        geom_line(position = position_dodge(0.3)) + 
+        geom_point(size = 3, position = position_dodge(0.3), pch = 21, colour = 'black') + 
+        labs(x = 'Exposure week', y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl, caption = captns) + 
+        scale_colour_manual(values = cls) + 
+        scale_fill_manual(values = cls) + 
+        theme_ipsum() + 
+        theme(
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), 
+          legend.title = element_blank()
+        )
+      
+      p1
+      
+    })
+  )
+
+# 7.7C, 8.0A0.2
+dissmods77802 <- dissdat %>%
+  filter(trt %in% c('7.7C', '8.0A0.2')) %>% 
+  mutate(trt = fct_drop(trt)) %>% 
+  group_by(species) %>% 
+  nest %>% 
+  mutate(
+    mixmod = purrr::map(data, function(x){
+
+      tomod <- x %>% 
+        mutate(
+          week = factor(week), 
+          jar = fct_drop(jar), 
+          trt = fct_drop(trt)
+        )
+      
+      out <- lmerTest::lmer(val ~ trt * week + (1|jar), data = tomod)
+      
+      return(out)
+      
+    }),
+    mixmodnoint = purrr::map(data, function(x){
+      
+      tomod <- x %>% 
+        mutate(
+          week = factor(week), 
+          jar = fct_drop(jar), 
+          trt = fct_drop(trt)
+        )
+    
+      out <- lmerTest::lmer(val ~ trt + week + (1|jar), data = tomod)
+      
+      return(out)
+      
+    }),
+    anomod = purrr::map(mixmod, function(x){
+      
+      out <- anova(x)
+      
+      return(out)
+      
+    }), 
+    anomodnoint = purrr::map(mixmodnoint, function(x){
+      
+      out <- anova(x)
+      
+      return(out)
+      
+    }), 
+    plomod = purrr::pmap(list(species, mixmod), function(species, mixmod){
+
+      # estimates
+      mnsval <- estimate_means(mixmod)
+      
+      # sample size
+      n <- mixmod@frame %>% nrow
+      
+      # labels
+      subttl <- paste0('Standardized dissolution, ', species, ' oyster')
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      
+      # mean esimate plots
+      p1 <- ggplot(mnsval, aes(x = week, y = Mean, group = trt, colour = trt, fill = trt)) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
+        geom_line(position = position_dodge(0.3)) + 
+        geom_point(size = 3, position = position_dodge(0.3), pch = 21, colour = 'black') + 
+        labs(x = 'Exposure week', y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl, caption = captns) + 
+        scale_colour_manual(values = cls) + 
+        scale_fill_manual(values = cls) + 
+        theme_ipsum() + 
+        theme(
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), 
+          legend.title = element_blank()
+        )
+      
+      p1
+      
+    })
+  )
 ```
 
 ## Treatment effects only, all weeks combined {.tabset .tabset-pills}
@@ -710,7 +872,7 @@ bymods %>% filter(species == 'Olympia') %>% pull(plomod)
 bymods %>% filter(species == 'Pacific') %>% pull(plomod)
 ```
 
-## All treatments {.tabset .tabset-pills}
+## All treatments x week {.tabset .tabset-pills}
 
 ### Olympia oyster
 
@@ -783,7 +945,7 @@ anomod %>%
   HTML
 ```
 
-## 7.7C, 8.0C {.tabset .tabset-pills}
+## 7.7C, 8.0C x week {.tabset .tabset-pills}
 
 ### Olympia oyster
 
@@ -837,7 +999,7 @@ dat %>%
   pull(plomod)
 ```
 
-## 7.7C, 7.7A0.2, 7.7A0.5 {.tabset .tabset-pills}
+## 7.7C, 7.7A0.2, 7.7A0.5 x week {.tabset .tabset-pills}
 
 ### Olympia oyster
 
@@ -891,7 +1053,7 @@ dat %>%
   pull(plomod)
 ```
 
-## 8.0C, 8.0A0.2 {.tabset .tabset-pills}
+## 8.0C, 8.0A0.2 x week {.tabset .tabset-pills}
 
 ### Olympia oyster
 
@@ -945,7 +1107,7 @@ dat %>%
   pull(plomod)
 ```
 
-## 7.7C, 7.7A0.5 {.tabset .tabset-pills}
+## 7.7C, 7.7A0.5 x week {.tabset .tabset-pills}
 
 ### Olympia oyster
 
@@ -999,7 +1161,7 @@ dat %>%
   pull(plomod)
 ```
 
-## 8.0C, 7.7A0.5 {.tabset .tabset-pills}
+## 8.0C, 7.7A0.5 x week {.tabset .tabset-pills}
 
 ### Olympia oyster
 
@@ -1053,8 +1215,7 @@ dat %>%
   pull(plomod)
 ```
 
-
-## 7.7A0.2, 7.7A0.5, 8.0A0.2 {.tabset .tabset-pills}
+## 7.7A0.2, 7.7A0.5, 8.0A0.2 x week {.tabset .tabset-pills}
 
 ### Olympia oyster
 
@@ -1086,6 +1247,114 @@ dat %>%
 
 ```{r}
 dat <- dissmods7780a %>% 
+  filter(species == 'Pacific')
+
+dat %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Dissolution vs week + treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Dissolution vs week x treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+## 7.7A0.2, 8.0A0.2 x week {.tabset .tabset-pills}
+
+### Olympia oyster
+
+```{r}
+dat <- dissmods772802 %>% 
+  filter(species == 'Olympia')
+
+dat %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Dissolution vs week + treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Dissolution vs week x treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+### Pacific oyster
+
+```{r}
+dat <- dissmods772802 %>% 
+  filter(species == 'Pacific')
+
+dat %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Dissolution vs week + treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Dissolution vs week x treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+## 7.7C, 8.0A0.2 x week {.tabset .tabset-pills}
+
+### Olympia oyster
+
+```{r}
+dat <- dissmods77802 %>% 
+  filter(species == 'Olympia')
+
+dat %>% 
+  pull(anomodnoint) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Dissolution vs week + treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+
+dat %>% 
+  pull(anomod) %>% 
+  .[[1]] %>% 
+  knitr::kable(format = 'html', digits = 2, caption = 'Dissolution vs week x treatment') %>%
+  kable_styling(full_width = T, font_size = 14) %>% 
+  HTML
+```
+
+```{r, fig.height = 5, fig.width = 6, out.width = '70%', results = 'hide', fig.align = 'center'}
+dat %>% 
+  pull(plomod)
+```
+
+### Pacific oyster
+
+```{r}
+dat <- dissmods77802 %>% 
   filter(species == 'Pacific')
 
 dat %>% 
