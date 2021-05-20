@@ -448,38 +448,40 @@ dev.off()
 knitr::include_graphics('figs/calcmod1.jpg')
 ```
 
-## Clearance models - week by trt
+## Respiration models - week by trt
 
-[download](figs/clrcmod1.jpg)
+[download](figs/respmod1.jpg)
 ```{r, results = 'hide'}
 
 trts <- tibble(
   shrtlab = c("7.7C", "7.7A0.2", "7.7A0.5", "8.0C", "8.0A0.2"),
-  lngslab = c("7.7 Constant", "7.7 Fluctuating 0.2A", "7.7 Fluctuating 0.5A", "8.0 Constant", "8.0 Fluctuating 0.2A")
+  lngslab = c("pH7.7", "pH7.7A0.2", "pH7.7A0.5", "pH8.0", "pH8.0A0.2")
 )
 
-clrcdat <- read_excel('data/raw/Resp and CR data (1).xlsx', sheet = 'Clearance') %>% 
+respdat <- read_excel('data/raw/Resp and CR data (1).xlsx', sheet = 'Respiration Rates') %>% 
   clean_names() %>% 
   # filter(time != 0) %>% 
   select(
     species, 
-    week = time, 
+    week, 
     trt = treatment,
-    val = clearance_rate_l_h_1
+    val = respiration_rate_umol_hr
   ) %>%
   mutate(
+    val = as.numeric(val),
     trt = gsub('^8\\s\\.', '8.', trt),
     trt = factor(trt, levels = trts$lngslab, labels = trts$shrtlab), 
     trt = fct_drop(trt)
-  )
+  ) %>% 
+  filter(!is.na(species))
 
 # treatment colors
 cls <- RColorBrewer::brewer.pal(6, 'BrBG')
 cls <- c(cls[1:3], cls[c(6, 4)])
-names(cls) <- levels(clrcdat$trt)
+names(cls) <- levels(respdat$trt)
 
 # all comparisons
-clrcdatmodsall <- clrcdat %>%
+respdatmodsall <- respdat %>%
   group_by(species) %>% 
   nest %>% 
   mutate(
@@ -499,10 +501,96 @@ clrcdatmodsall <- clrcdat %>%
   )
 
 # sample size
+pacn <- respdatmodsall %>% filter(species == 'Pacific') %>% pull(mixmod) %>% .[[1]] %>% model.frame %>% nrow
+olyn <- respdatmodsall %>% filter(species == 'Olympia') %>% pull(mixmod) %>% .[[1]] %>% model.frame %>% nrow
+captns <- paste0('n = ', pacn , ' (Pacific), ', olyn, ' (Olympia)')
+
+# Pacific estimates
+mnsval <- respdatmodsall %>% 
+  select(species, mixmod) %>% 
+  mutate(
+    mixmod = purrr::map(mixmod, estimate_means)
+    ) %>% 
+  unnest('mixmod') %>% 
+  mutate(
+    species = factor(species, levels = c('Pacific', 'Olympia'), labels = c('(a) Pacific oyster', '(b) Olympia oyster'))
+  )
+
+# mean estimate plots
+p <- ggplot(mnsval, aes(x = week, y = Mean, group = trt, colour = trt, fill = trt)) + 
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
+  geom_line(position = position_dodge(0.3)) + 
+  geom_point(size = 3, position = position_dodge(0.3), pch = 21, colour = 'black') + 
+  labs(x = 'Exposure week', y = 'Mean respiration (umol/hr, +/- 95% CI)', caption = captns) + 
+  facet_wrap(~species, ncol = 2) +
+  scale_colour_manual(values = cls) + 
+  scale_fill_manual(values = cls) + 
+  theme_minimal() + 
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(), 
+    legend.title = element_blank(), 
+    strip.text = element_text(hjust = 0, size = 12), 
+    plot.caption = element_text(face = 'italic')
+  )
+
+jpeg('figs/respmod1.jpg', height = 4, width = 7, units = 'in', res = 300, family = 'serif')
+p
+dev.off()
+```
+```{r respmod1, fig.cap = "Model estimates of respiration rates (+/- 95% confidence intervals) for each species, treatment and week of experimental exposure.  Estimates are based on two-way analysis of variance model with fixed effects for week and treatment.  Confidence intervals that do not include zero have statistically significant clearance and treatments/weeks that have non-overlapping confidence intervals can be considered statistically different.", out.width = "90%", fig.align = 'center'}
+knitr::include_graphics('figs/respmod1.jpg')
+```
+
+## Clearance models - week by trt
+
+[download](figs/clrcmod1.jpg)
+```{r, results = 'hide'}
+trts <- tibble(
+  shrtlab = c("7.7C", "7.7A0.2", "7.7A0.5", "8.0C", "8.0A0.2"),
+  lngslab = c("7.7 Constant", "7.7 Fluctuating 0.2A", "7.7 Fluctuating 0.5A", "8.0 Constant", "8.0 Fluctuating 0.2A")
+)
+clrcdat <- read_excel('data/raw/Resp and CR data (1).xlsx', sheet = 'Clearance') %>% 
+  clean_names() %>% 
+  # filter(time != 0) %>% 
+  select(
+    species, 
+    week = time, 
+    trt = treatment,
+    val = clearance_rate_l_h_1
+  ) %>%
+  mutate(
+    trt = gsub('^8\\s\\.', '8.', trt),
+    trt = factor(trt, levels = trts$lngslab, labels = trts$shrtlab), 
+    trt = fct_drop(trt)
+  )
+# treatment colors
+cls <- RColorBrewer::brewer.pal(6, 'BrBG')
+cls <- c(cls[1:3], cls[c(6, 4)])
+names(cls) <- levels(clrcdat$trt)
+# all comparisons
+clrcdatmodsall <- clrcdat %>%
+  group_by(species) %>% 
+  nest %>% 
+  mutate(
+    mixmod = purrr::map(data, function(x){
+      
+      tomod <- x %>% 
+        mutate(
+          week = factor(week), 
+          trt = fct_drop(trt)
+        )
+      
+      out <- lm(val ~ trt * week, data = tomod)
+      
+      return(out)
+      
+    })
+  )
+# sample size
 pacn <- clrcdatmodsall %>% filter(species == 'Pacific') %>% pull(mixmod) %>% .[[1]] %>% model.frame %>% nrow
 olyn <- clrcdatmodsall %>% filter(species == 'Olympia') %>% pull(mixmod) %>% .[[1]] %>% model.frame %>% nrow
 captns <- paste0('n = ', pacn , ' (Pacific), ', olyn, ' (Olympia)')
-
 # Pacific estimates
 mnsval <- clrcdatmodsall %>% 
   select(species, mixmod) %>% 
@@ -513,7 +601,6 @@ mnsval <- clrcdatmodsall %>%
   mutate(
     species = factor(species, levels = c('Pacific', 'Olympia'), labels = c('(a) Pacific oyster', '(b) Olympia oyster'))
   )
-
 # mean estimate plots
 p <- ggplot(mnsval, aes(x = week, y = Mean, group = trt, colour = trt, fill = trt)) + 
   geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
@@ -531,7 +618,6 @@ p <- ggplot(mnsval, aes(x = week, y = Mean, group = trt, colour = trt, fill = tr
     strip.text = element_text(hjust = 0, size = 12), 
     plot.caption = element_text(face = 'italic')
   )
-
 jpeg('figs/clrcmod1.jpg', height = 4, width = 7, units = 'in', res = 300, family = 'serif')
 p
 dev.off()
@@ -539,3 +625,4 @@ dev.off()
 ```{r clrcmod1, fig.cap = "Model estimates of clearance rates (+/- 95% confidence intervals) for each species, treatment and week of experimental exposure.  Estimates are based on two-way analysis of variance model with fixed effects for week and treatment.  Confidence intervals that do not include zero have statistically significant clearance and treatments/weeks that have non-overlapping confidence intervals can be considered statistically different.", out.width = "90%", fig.align = 'center'}
 knitr::include_graphics('figs/clrcmod1.jpg')
 ```
+
