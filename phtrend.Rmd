@@ -1,0 +1,154 @@
+---
+title: "pH time series decomposition"
+author: "M. W. Beck"
+output: html_document
+---
+
+First load relevant libraries.
+
+```{r setup, warning = F, message = F}
+library(knitr)
+library(tidyverse)
+library(lubridate)
+library(readxl)
+library(here)
+library(mgcv)
+library(oce)
+
+opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+Import the Padilla Bay data, convert the time zone to Pacific, no DST.
+
+```{r}
+# read Padilla Bay data
+pddat <- read_excel('data/raw/PDBBYWQ_2010-2019_Continuous_pH.xlsx') %>% 
+  mutate(
+    DateTimeStamp = force_tz(DateTimeStamp, tzone = 'Pacific/Pitcairn')
+  )
+```
+
+Let's just subset to hourly observations to reduce size of the data.  We should still be able to detect dominant periods from these data.  We also add a column for decimal time so we can model the long-term, annual trend. The plot shows the whole time series.
+
+```{r, fig.height = 3, fig.width= 12}
+pddat <- pddat %>% 
+  filter(minute(DateTimeStamp) == 0) %>% 
+  mutate(dectime = decimal_date(DateTimeStamp))
+
+plot(pH ~ DateTimeStamp, data = pddat, type = 'l')
+```
+
+We create a GAM to model the long-term, annual trend.  The `k` argument sets an upper limit on the number of potential knots.  Increasing this number to approximtely six per year should isolate the long-term trend. 
+```{r, fig.height = 4, fig.width = 9}
+# annual gam
+mod <- gam(pH ~ s(dectime, k = 6*20), data = pddat)
+
+plot(mod)
+```
+
+Now we add the annual predictions to the data and subtract them from pH to get a detrended time series without the long-term, annual trend.
+```{r, fig.height = 3, fig.width = 12}
+pdprd <- pddat %>% 
+  mutate(
+    ph_ann = predict(mod),
+    ph_dtrn = pH - ph_ann
+  )
+
+plot(ph_dtrn ~ DateTimeStamp, data = pdprd, type = 'l')
+```
+
+Now we can cheat and assume that the daily/sub-daily time series does not change between years.  So, we subset one year of data for ease of analysis.  We also subset the summer months since we know the time series is non-stationary throughout the year (amplitudes change).
+```{r, fig.height = 3, fig.width = 12}
+pdsub <- pdprd %>% 
+  filter(year(DateTimeStamp) == 2015) %>% 
+  filter(month(DateTimeStamp) %in% c(5:8))
+
+plot(ph_dtrn ~ DateTimeStamp, data = pdsub, type = 'l')
+```    
+
+Now we cheat again and use harmonic regression to predict sine waves for the major constituents in the daily data.  The oce R package has a function to predict tidal components but it can work equally well for other time series with different periods.  First, we plot the power spectrum to verify the dominant peaks.  Since there are 24 observations in a day, the frequencies 0.08 (2 / 24) and 0.04 (1 / 24) correspond to sub-daily and daily periods
+
+```{r, fig.height = 4, fig.width = 9}
+spectrum(pdsub$ph_dtrn, log = 'no', xlim = c(0, 0.1))
+```
+
+To use the oce functions, we have to convert the data into a 'sealevel' object.  The plot below confirms where we see the dominant peaks in the spectrum plot.  Here we cheat because the 'K1' and 'M2" sine waves are tidal components with daily and sub-daily frequencies, but we can predict these sine waves for the pH time series because this is where we've identified the dominant peaks  
+
+```{r, fig.height = 8, fig.width = 8}
+datsl <- as.sealevel(elevation = pdsub$ph_dtrn, time = pdsub$DateTimeStamp)
+plot(datsl)
+```
+
+Setup the harmonic regression and get predictions.  The plot below shows a subset of the sine waves for the first fifty observations.  We can clearly see the sub-daily (M2) and daily (K1) predicted components. 
+
+```{r, fig.height = 5, fig.width = 8}
+# tidal components to estimate
+constituents <- c('M2','K1')
+
+# loop through tidal components, predict each with tidem
+preds <- sapply(constituents, function(x){
+
+  mod <- tidem(t = datsl, constituent = x)
+  pred <- predict(mod)
+  pred - mean(pred)
+
+})
+
+# prep for plot
+subs <- 1:50
+toplo <- preds[subs, ] %>%
+  data.frame %>%
+  mutate(time = pdsub$DateTimeStamp[subs]) %>%
+  gather('component', 'estimate', -time) %>%
+  mutate(component = factor(component, level = c('Estimated', constituents)))
+
+# plot two weeks
+ggplot(toplo, aes(x = time, y = estimate, group = component)) +
+  geom_line() +
+  # scale_x_datetime(limits = as.POSIXct(c('2013-07-01', '2013-07-31'))) +
+  facet_wrap(~component, ncol = 1) +
+  theme_bw()
+```
+
+Now we can add the predictions back to the 2015, seasonal data frame to see how well the sum of the predictions modeled actual pH. 
+
+```{r, fig.height = 3, fig.width = 12}
+pdsub <- pdsub %>% 
+  mutate(
+    daily = data.frame(preds)[['K1']],
+    subdaily = data.frame(preds)[['M2']]
+  ) %>% 
+  rowwise() %>% 
+  mutate(
+    ph_mod = sum(ph_ann, daily, subdaily)
+  ) %>% 
+  ungroup()
+
+subs <- 1:200
+plot(ph_mod ~ DateTimeStamp, data = pdsub[subs, ], type = 'l')
+plot(pH ~ DateTimeStamp, data = pdsub[subs, ], type = 'l')
+```
+
+To get the amplitudes of each component, we can just check the ranges and add the mean pH back to the sine wave components. 
+
+```{r}
+# daily
+range(pdsub$daily) + mean(pdsub$pH)
+
+# sub-daily
+range(pdsub$subdaily) + mean(pdsub$pH)
+```
+
+For the annual changes, we can take the whole time series and get the ranges for each year from the annual GAM predictions.
+
+```{r}
+pdprd <- pdprd %>% 
+  mutate(yr = year(DateTimeStamp)) %>% 
+  group_by(yr) %>% 
+  summarise(
+    minph = min(ph_ann), 
+    maxph = max(ph_ann)
+  )
+pdprd
+```
+
