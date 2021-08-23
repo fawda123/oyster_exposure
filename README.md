@@ -19,3 +19,5 @@ Clearance results: <https://fawda123.github.io/oyster_exposure/clearance.html>
 Respiration results: <https://fawda123.github.io/oyster_exposure/respiration.html>
 
 Puget Sound field data: <https://fawda123.github.io/oyster_exposure/field.html>
+
+Padilla Bay pH decomposition: <https://fawda123.github.io/oyster_exposure/phtrend.html>
