@@ -53,7 +53,7 @@ srvdat <- srvraw %>%
   nest %>% 
   mutate(
     srvmod = purrr::map(data, function(x){
-      browser()
+
       fit <- survfit(Surv(week, dead) ~ trt, data = x)
       return(fit)
       
@@ -198,6 +198,39 @@ dev.off()
 ```
 ```{r dissmod1, fig.cap = "Model estimates of mean dissolution (+/- 95% confidence intervals) for each species, treatment and week of experimental exposure.  Estimates are based on two-way analysis of variance models with an interaction between week and treatment, using jar as a random effect.  Confidence intervals that do not include zero have statistically significant dissolution and treatments/weeks that have non-overlapping confidence intervals can be considered statistically different.  Dissolution is expressed as a relative total from 0-1 based on descriptions in the methods.", out.width = "90%", fig.align = 'center'}
 knitr::include_graphics('figs/dissmod1.jpg')
+```
+
+## Distribution of model residuals
+
+[download](figs/dissmod1resid.jpg)
+```{r, results = 'hide'}
+toplo <- dissmodsall %>% 
+  mutate(
+    resid = purrr::map(mixmod, residuals)
+  ) %>% 
+  select(species, resid) %>% 
+  unnest('resid')
+
+p <- ggplot(toplo, aes(sample = resid)) + 
+  stat_qq() + 
+  stat_qq_line() +
+  facet_wrap(~species, ncol = 2) +
+  labs(
+    x = 'Theoretical quantiles', 
+    y = 'Sample quantiles'
+  ) +
+  theme(
+    strip.background = element_blank()
+  ) + 
+  theme_minimal()
+
+jpeg('figs/dissmod1resid.jpg', height = 3, width = 5, units = 'in', res = 300, family = 'serif')
+p
+dev.off()
+```
+
+```{r dissmod1resid, fig.cap = "Distribution of model residuals (sample) vs theoretical quantiles from a normal distribution. Model residuals are based on mean dissolution for each species vs treatment and week of experimental exposure.  Estimates are based on two-way analysis of variance models with an interaction between week and treatment, using jar as a random effect.", out.width = "70%", fig.align = 'center'}
+knitr::include_graphics('figs/dissmod1resid.jpg')
 ```
 
 ## Dissolution models - trt only
