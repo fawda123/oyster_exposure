@@ -17,6 +17,7 @@ library(lubridate)
 library(readxl)
 library(here)
 library(oce)
+library(downloadthis)
 
 opts_chunk$set(warning = FALSE, message = FALSE)
 ```
@@ -291,6 +292,18 @@ phres <- tibble(
       return(out)
       
     }),
+    sumval = map(annprd, function(annprd){
+      
+      out <- tibble(
+        avev = mean(annprd$pH, na.rm = T),
+        minv = min(annprd$pH, na.rm = T),
+        maxv = max(annprd$pH, na.rm = T),
+        sdv = sd(annprd$pH, na.rm = T)
+      )
+      
+      return(out)
+
+    }), 
     dlyprd = map(annprd, function(annprd){
       
       datsub <- annprd %>% 
@@ -456,7 +469,7 @@ ggplot(rngplo, aes(x = var)) +
   )
 ```
 
-Distribution of total range of pH acros days from May to August 2012. 
+Distribution of total range of pH across days from May to August 2012. 
 
 ```{r, fig.height = 7, fig.width = 6}
 dlyrngplo <- phres %>% 
@@ -468,8 +481,74 @@ ggplot(dlyrngplo, aes(x = phdff)) +
   facet_wrap(~site, ncol = 1) + 
   theme_minimal() + 
   labs(
-    x = 'dail pH amplitude, May-Aug', 
+    x = 'daily pH amplitude, May-Aug', 
     y = 'Density'
   )
+```
+
+Tabular summary of site characteristics:
+
+```{r, echo = F}
+totab1 <- phres %>% 
+  select(sumval) %>% 
+  unnest('sumval') %>% 
+  ungroup() %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  mutate(
+    avev = paste0(avev, ' '), 
+    minv = paste0('(', minv, ', '), 
+    maxv = paste0(maxv, ')')
+  ) %>% 
+  unite('rng', avev, minv, maxv, sep = '')
+
+
+totab2 <- phres %>% 
+  select(rngs) %>% 
+  unnest('rngs') %>% 
+  ungroup() %>% 
+  select(site, var, amp = maxv) %>% 
+  mutate(
+    amp = round(amp, 3)
+  ) %>% 
+  spread(var, amp)
+totab3 <- phres %>% 
+  select(dlyrng) %>% 
+  unnest('dlyrng') %>% 
+  group_by(site) %>% 
+  filter((phdff %in% min(phdff, na.rm = T)) | (phdff %in% max(phdff, na.rm = T))) %>% 
+  mutate(
+    var = case_when(
+      phdff == min(phdff) ~ 'min daily', 
+      phdff == max(phdff) ~ 'max daily'
+    )
+  ) %>% 
+  ungroup() %>% 
+  select(site, phdff, var) %>% 
+  spread(var, phdff) %>% 
+  mutate_if(is.numeric, round, 2)
+
+totab <- full_join(totab1, totab3, by = 'site') %>% 
+  full_join(totab2, by = 'site') %>% 
+  gather('Summary', 'val', -site) %>% 
+  mutate(
+    Summary = factor(Summary, 
+                levels = c('rng', 'sdv', 'Annual', 'Daily', 'O1', 'K1', 'N2', 'S2', 'M2', 'min daily', 'max daily'),
+                labels = c('Ave (min, max)', 'St. Dev',  'Annual', 'Daily', 'O1', 'K1', 'N2', 'S2', 'M2', 'min daily', 'max daily')
+                )
+  ) %>% 
+  spread(site, val) %>% 
+  arrange(Summary)
+
+download_this(
+  totab,
+  output_name = "ph-summmary",
+  output_extension = ".xlsx",
+  button_label = "Download data",
+  button_type = "warning",
+  has_icon = TRUE,
+  icon = "fa fa-save"
+)
+
+knitr::kable(totab, caption = 'Summary statistics of pH for four NERRS sites (Elkhorn Slough Vierra Mouth, Narragansett Bay T-Wharf Bottom, North Carolina East Cribbing, and Padilla Bay Bayview Channel).  Summaries include average (min/max) and standard deviation from a ten year record from 2010 to 2020 and estimates of amplitudes for decomposed periods from the pH time series.  The annual amplitude is estimated from the complete time series, whereas the daily, and tidal constituents (O1 25.82 hours, K1 23.93, N2 12.66, S2 12, and M2 12.42) are based on estimates from May to August 2012.  The min and max daily amplitudes represent the range of amplitudes observed as the sum of the separate components from the above rows.')
 ```
 
