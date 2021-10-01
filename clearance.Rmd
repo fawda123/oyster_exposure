@@ -583,7 +583,7 @@ clrcdatmodsall <- clrcdat %>%
       n <- nrow(model.frame(mixmod))
       
       # labels
-      subttl <- paste0('Clearance (liters/hr), ', species, ' oyster')
+      subttl <- paste0('Clearance (liters hr-1), ', species, ' oyster')
       captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
       
       # mean esimate plots

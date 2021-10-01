@@ -548,12 +548,14 @@ mnsval <- respdatmodsall %>%
     species = factor(species, levels = c('Pacific', 'Olympia'), labels = c('(a) Pacific oyster', '(b) Olympia oyster'))
   )
 
+ylb <- parse(text = expression(paste('Mean respiration (', mu, 'mol ', O[2]~hr^-1~g^-1, ', +/- 95% CI)')))
+
 # mean estimate plots
 p <- ggplot(mnsval, aes(x = week, y = Mean, group = trt, colour = trt, fill = trt)) + 
   geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
   geom_line(position = position_dodge(0.3)) + 
   geom_point(size = 3, position = position_dodge(0.3), pch = 21, colour = 'black') + 
-  labs(x = 'Exposure week', y = 'Mean respiration (umol/hr, +/- 95% CI)', caption = captns) + 
+  labs(x = 'Exposure week', y = ylb, caption = captns) + 
   facet_wrap(~species, ncol = 2) +
   scale_colour_manual(values = cls) + 
   scale_fill_manual(values = cls) + 
@@ -633,12 +635,15 @@ mnsval <- clrcdatmodsall %>%
   mutate(
     species = factor(species, levels = c('Pacific', 'Olympia'), labels = c('(a) Pacific oyster', '(b) Olympia oyster'))
   )
+
+ylb <- parse(text = expression(paste('Mean clearance (liters ', hr^-1, ', +/- 95% CI)')))
+
 # mean estimate plots
 p <- ggplot(mnsval, aes(x = week, y = Mean, group = trt, colour = trt, fill = trt)) + 
   geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
   geom_line(position = position_dodge(0.3)) + 
   geom_point(size = 3, position = position_dodge(0.3), pch = 21, colour = 'black') + 
-  labs(x = 'Exposure week', y = 'Mean clearance (l/hr, +/- 95% CI)', caption = captns) + 
+  labs(x = 'Exposure week', y = ylb, caption = captns) + 
   facet_wrap(~species, ncol = 2) +
   scale_colour_manual(values = cls) + 
   scale_fill_manual(values = cls) + 
