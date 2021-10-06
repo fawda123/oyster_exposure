@@ -3,34 +3,34 @@ library(tidyverse)
 library(lubridate)
 library(here)
 
-pdbby <- import_local(here('~/Desktop/116853.zip'), 'pdbbywq', trace = T)
-nocec <- import_local(here('~/Desktop/116853.zip'), 'nocecwq', trace = T)
-nartb <- import_local(here('~/Desktop/116853.zip'), 'nartbwq', trace = T)
-elkvm <- import_local(here('~/Desktop/116853.zip'), 'elkvmwq', trace = T)
+kach3 <- import_local(here('data/raw/810300.zip'), 'kach3wq', trace = T)
+sfbcc <- import_local(here('data/raw/810300.zip'), 'sfbccwq', trace = T)
+sfbgc <- import_local(here('data/raw/810300.zip'), 'sfbgcwq', trace = T)
+tjrbr <- import_local(here('data/raw/810300.zip'), 'tjrbrwq', trace = T)
 
-pdbbyph <- qaqc(pdbby, qaqc_keep = c('0', '1', '2', '3', '4', '5')) %>% 
+kach3ph <- qaqc(kach3, qaqc_keep = c('0', '1', '2', '3', '4', '5')) %>% 
   select(DateTimeStamp = datetimestamp, pH = ph) %>% 
-  mutate(StationCode = 'pdbby') %>% 
+  mutate(StationCode = 'kach3') %>% 
   filter(lubridate::year(DateTimeStamp) >= 2010)
-nocecph <- qaqc(nocec, qaqc_keep = c('0', '1', '2', '3', '4', '5')) %>% 
+sfbccph <- qaqc(sfbcc, qaqc_keep = c('0', '1', '2', '3', '4', '5')) %>% 
   select(DateTimeStamp = datetimestamp, pH = ph) %>% 
-  mutate(StationCode = 'nocec') %>% 
+  mutate(StationCode = 'sfbcc') %>% 
   filter(lubridate::year(DateTimeStamp) >= 2010)
-nartbph <- qaqc(nartb, qaqc_keep = c('0', '1', '2', '3', '4', '5')) %>% 
+sfbgcph <- qaqc(sfbgc, qaqc_keep = c('0', '1', '2', '3', '4', '5')) %>% 
   select(DateTimeStamp = datetimestamp, pH = ph) %>% 
-  mutate(StationCode = 'nartb') %>% 
+  mutate(StationCode = 'sfbgc') %>% 
   filter(lubridate::year(DateTimeStamp) >= 2010)
-elkvmph <- qaqc(elkvm, qaqc_keep = c('0', '1', '2', '3', '4', '5')) %>% 
+tjrbrph <- qaqc(tjrbr, qaqc_keep = c('0', '1', '2', '3', '4', '5')) %>% 
   select(DateTimeStamp = datetimestamp, pH = ph) %>% 
-  mutate(StationCode = 'elkvm') %>% 
+  mutate(StationCode = 'tjrbr') %>% 
   filter(lubridate::year(DateTimeStamp) >= 2010)
 
-write.csv(pdbbyph, here('data/raw/pdbbyph.csv'), row.names = F)
-write.csv(nocecph, here('data/raw/nocecph.csv'), row.names = F)
-write.csv(nartbph, here('data/raw/nartbph.csv'), row.names = F)
-write.csv(elkvmph, here('data/raw/elkvmph.csv'), row.names = F)
+write.csv(kach3ph, here('data/raw/kach3ph.csv'), row.names = F)
+write.csv(sfbccph, here('data/raw/sfbccph.csv'), row.names = F)
+write.csv(sfbgcph, here('data/raw/sfbgcph.csv'), row.names = F)
+write.csv(tjrbrph, here('data/raw/tjrbrph.csv'), row.names = F)
 
-nerrsph <- bind_rows(pdbbyph, nocecph, nartbph, elkvmph)
+nerrsph <- bind_rows(kach3ph, sfbccph, sfbgcph, tjrbrph)
 
 p <- ggplot(nerrsph, aes(x = DateTimeStamp, y = pH)) + 
   geom_line() + 
