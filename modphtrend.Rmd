@@ -1,0 +1,262 @@
+---
+title: "Modelled pH time series decomposition"
+author: "M. W. Beck"
+output: html_document
+---
+
+```{r setup, warning = F, message = F}
+library(knitr)
+library(tidyverse)
+library(readxl)
+library(here)
+library(lubridate)
+library(oce)
+
+opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+Import, format data and run decomposition. 
+
+```{r}
+moddat <- read_excel(here('data/raw/pH for Nina 2021-09-24.xlsx')) %>% 
+  select(Date, Time, matches('0:42|0:0|14:21')) %>% 
+  gather('cell', 'pH', -Date, -Time) %>% 
+  mutate(
+    cell = case_when(
+      grepl('14:21', cell) ~ '14,21', 
+      grepl('0:42', cell) ~ '0,42', 
+      grepl('0:0', cell) ~ '0,0'
+    ), 
+    Date = gsub('^(.*)\\s.*$', '\\1', Date)
+  ) %>% 
+  unite('datetime', Date, Time, sep = ' ') %>% 
+  mutate(
+    datetime = ymd_hms(datetime, tz = 'Pacific/Pitcairn')
+  )
+                     
+# decomp
+phres <- moddat %>% 
+  group_by(cell) %>% 
+  nest() %>% 
+  mutate(
+    annprd = pmap(list(cell, data), function(cell, data){
+      
+      dat <- data %>% 
+        filter(minute(datetime) == 0) %>% 
+        mutate(dectime = decimal_date(datetime))
+      
+      annmod <- lm(pH ~ sin(2*pi*dectime) + cos(2*pi*dectime), data = dat, na.action = na.exclude)
+      
+      out <- dat %>% 
+        mutate(
+          ph_ann = predict(annmod),
+          ph_anndtrn = pH - ph_ann
+        )
+      
+      return(out)
+      
+    }),
+    sumval = map(annprd, function(annprd){
+      
+      out <- tibble(
+        avev = mean(annprd$pH, na.rm = T),
+        minv = min(annprd$pH, na.rm = T),
+        maxv = max(annprd$pH, na.rm = T),
+        sdv = sd(annprd$pH, na.rm = T)
+      )
+      
+      return(out)
+      
+    }), 
+    dlyprd = map(annprd, function(annprd){
+      
+      datsub <- annprd %>% 
+        mutate(
+          decdays =  365 * (decimal_date(datetime) - max(year(datetime)))
+        )
+      
+      dlymod <- lm(ph_anndtrn ~ sin(2*pi*decdays) + cos(2*pi*decdays), data = datsub, na.action = na.exclude)
+      
+      dlyprd <- datsub %>% 
+        mutate(
+          ph_dly = predict(dlymod),
+          ph_dlydtrn = ph_anndtrn - ph_dly
+        )
+      
+      datsl <- as.sealevel(elevation = dlyprd$ph_dlydtrn, time = dlyprd$datetime)
+      
+      constituents <- c('M2', 'S2', 'N2', 'K1', 'O1')
+      
+      # loop through tidal components, predict each with tidem
+      preds <- sapply(constituents, function(x){
+        
+        mod <- tidem(t = datsl, constituent = x)
+        pred <- predict(mod)
+        pred - mean(pred, na.rm = T)
+        
+      })
+      
+      out <- dlyprd %>% 
+        mutate(
+          K1 = data.frame(preds)[['K1']],
+          O1 = data.frame(preds)[['O1']],
+          S2 = data.frame(preds)[['S2']],
+          N2 = data.frame(preds)[['N2']],
+          M2 = data.frame(preds)[['M2']]
+        ) %>% 
+        rowwise() %>% 
+        mutate(
+          ph_mod = sum(ph_ann, ph_dly, K1, O1, S2, N2, M2)
+        ) %>% 
+        ungroup()
+      
+      return(out)
+      
+    }),
+    rngs = pmap(list(dlyprd, annprd), function(dlyprd, annprd){
+      
+      rngs <- dlyprd %>% 
+        select(ph_dly, K1, O1, S2, N2, M2) %>% 
+        mutate(
+          ph_dly = ph_dly - mean(ph_dly, na.rm = T)
+        ) %>% 
+        gather('var', 'val') %>% 
+        group_by(var) %>% 
+        summarise(
+          minv = min(val, na.rm = T), 
+          maxv = max(val, na.rm = T),
+          .groups = 'drop'
+        )
+      
+      ann <- range(annprd$ph_ann, na.rm = T) %>% 
+        diff %>% 
+        `/`(2) %>% 
+        tibble(
+          var = 'ann', 
+          minv = ., 
+          maxv = .
+        ) %>% 
+        mutate(
+          minv = -1 * minv
+        )
+      
+      out <- bind_rows(rngs, ann) %>% 
+        mutate(
+          var = factor(var, 
+                       levels = c('ann', 'ph_dly', 'K1', 'O1', 'M2', 'S2', 'N2'), 
+                       labels = c('Annual', 'Daily', 'K1', 'O1', 'M2', 'S2', 'N2')
+          )
+        )
+      
+      return(out)
+      
+    }),
+    dlyrng = map(dlyprd, function(dlyprd){
+      
+      out <- dlyprd %>% 
+        mutate(
+          dy = yday(datetime)
+        ) %>% 
+        group_by(dy) %>% 
+        summarise(
+          minph = ifelse(length(na.omit(ph_mod)) > 0, min(ph_mod, na.rm = T), NA),
+          maxph = ifelse(length(na.omit(ph_mod)) > 0, max(ph_mod, na.rm = T), NA),
+          .groups = 'drop'
+        ) %>% 
+        mutate(
+          phdff = (maxph - minph) / 2
+        )
+      
+      return(out)
+      
+    })
+  )
+```
+
+pH time series for all cells plus estimated annual component. 
+
+```{r, fig.height = 6, fig.width = 9}
+annplo <- phres %>% 
+  select(annprd) %>% 
+  unnest('annprd') 
+
+p <- ggplot(annplo, aes(x = datetime, y = pH)) + 
+  geom_line() + 
+  geom_line(aes(y = ph_ann, col = 'Annual')) +
+  scale_color_manual(values = 'red') + 
+  facet_wrap(~cell, ncol = 1) + 
+  theme_minimal() +
+  theme(
+    legend.position = 'top', 
+    legend.title = element_blank()
+  )
+  labs(
+    x = NULL
+  )
+p
+```
+
+Estimated amplitudes for annual, daily, and tidal components for each cell. 
+
+```{r, fig.height = 8, fig.width = 5}
+
+rngplo <- phres %>% 
+  select(rngs) %>% 
+  unnest('rngs')
+
+ggplot(rngplo, aes(x = var)) + 
+  geom_errorbar(aes(ymin = minv, ymax = maxv)) + 
+  geom_hline(yintercept = 0, linetype = 'dotted') + 
+  facet_wrap(~cell, ncol = 1) +
+  theme_minimal() + 
+  theme(
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.y = element_blank(), 
+    panel.grid.minor.x = element_blank()
+  ) +
+  labs(
+    y = 'pH range', 
+    x = NULL
+  )
+```
+
+Estimated amplitudes for annual, daily, and tidal components for each cell, alternative plot. 
+
+```{r, fig.height = 4, fig.width = 8}
+
+rngplo <- phres %>% 
+  select(rngs) %>% 
+  unnest('rngs')
+
+ggplot(rngplo, aes(x = cell)) + 
+  geom_errorbar(aes(ymin = minv, ymax = maxv)) + 
+  geom_hline(yintercept = 0, linetype = 'dotted') + 
+  theme_minimal() + 
+  facet_wrap(~var, scales = 'free_y', ncol = 7) + 
+  theme(
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.y = element_blank(), 
+    panel.grid.minor.x = element_blank()
+  ) +
+  labs(
+    y = 'pH range', 
+    x = NULL
+  )
+```
+
+Distribution of total range of pH across days from May to August 2012. 
+
+```{r, fig.height = 7, fig.width = 6}
+dlyrngplo <- phres %>% 
+  select(dlyrng) %>% 
+  unnest('dlyrng')
+
+ggplot(dlyrngplo, aes(x = phdff)) + 
+  geom_histogram() + 
+  facet_wrap(~cell, ncol = 1) + 
+  theme_minimal() + 
+  labs(
+    x = 'daily pH amplitude, May-Aug', 
+    y = 'Density'
+  )
+```
