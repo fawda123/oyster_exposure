@@ -222,7 +222,7 @@ ggplot(rngplo, aes(x = var)) +
 
 Estimated amplitudes for annual, daily, and tidal components for each cell, alternative plot. 
 
-```{r, fig.height = 4, fig.width = 8}
+```{r, fig.height = 4, fig.width = 10}
 
 rngplo <- phres %>% 
   select(rngs) %>% 
