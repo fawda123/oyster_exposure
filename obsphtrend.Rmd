@@ -1,9 +1,9 @@
 ---
-title: "Pugset Sound modelled pH time series decomposition"
+title: "Puget Sound observed pH time series decomposition"
 author: "M. W. Beck"
 output: html_document
 ---
-
+  
 ```{r setup, warning = F, message = F}
 library(knitr)
 library(tidyverse)
@@ -11,6 +11,7 @@ library(readxl)
 library(here)
 library(lubridate)
 library(oce)
+library(mgcv)
 
 opts_chunk$set(warning = FALSE, message = FALSE)
 ```
@@ -18,38 +19,38 @@ opts_chunk$set(warning = FALSE, message = FALSE)
 Import, format data and run decomposition. 
 
 ```{r}
-moddat <- read_excel(here('data/raw/pH for Nina 2021-09-24.xlsx')) %>% 
-  select(Date, Time, matches('0:42|0:0|14:21')) %>% 
-  gather('cell', 'pH', -Date, -Time) %>% 
+obsdat <- read.csv(here('data/raw/2018 WDNR pH sensor data - 2018 WDNR pH sensor data.csv.csv')) %>% 
+  select(Date, TimePST, matches('pH')) %>% 
+  gather('loc', 'pH', -Date, -TimePST) %>% 
   mutate(
-    cell = case_when(
-      grepl('14:21', cell) ~ '14,21', 
-      grepl('0:42', cell) ~ '0,42', 
-      grepl('0:0', cell) ~ '0,0'
+    loc = case_when(
+      grepl('Buoy', loc) ~ 'Buoy', 
+      grepl('Edge', loc) ~ 'Farm edge', 
+      grepl('Mid', loc) ~ 'Farm center'
     ), 
-    Date = gsub('^(.*)\\s.*$', '\\1', Date)
+    loc = factor(loc, levels = c('Buoy', 'Farm edge', 'Farm center'))
   ) %>% 
-  unite('datetime', Date, Time, sep = ' ') %>% 
+  unite('datetime', Date, TimePST, sep = ' ') %>% 
   mutate(
-    datetime = ymd_hms(datetime, tz = 'Pacific/Pitcairn')
+    datetime = mdy_hms(datetime, tz = 'Pacific/Pitcairn')
   )
-                     
+
 # decomp
-phres <- moddat %>% 
-  group_by(cell) %>% 
+phres <- obsdat %>% 
+  group_by(loc) %>% 
   nest() %>% 
   mutate(
-    annprd = pmap(list(cell, data), function(cell, data){
+    annprd = pmap(list(loc, data), function(loc, data){
       
       dat <- data %>% 
         filter(minute(datetime) == 0) %>% 
         mutate(dectime = decimal_date(datetime))
       
-      annmod <- lm(pH ~ sin(2*pi*dectime) + cos(2*pi*dectime), data = dat, na.action = na.exclude)
+      # annmod <- lm(pH ~ sin(2*pi*dectime) + cos(2*pi*dectime), data = dat, na.action = na.exclude)
       
       out <- dat %>% 
         mutate(
-          ph_ann = predict(annmod),
+          ph_ann = stats::filter(pH, filter = rep(1, 24) / 24, sides = 1, method = 'convolution'),#predict(annmod),
           ph_anndtrn = pH - ph_ann
         )
       
@@ -72,10 +73,12 @@ phres <- moddat %>%
       
       datsub <- annprd %>% 
         mutate(
-          decdays =  365 * (decimal_date(datetime) - max(year(datetime)))
+          decdays =  365 * (decimal_date(datetime) - max(year(datetime))), 
+          hrs = hour(datetime)
         )
-      
+
       dlymod <- lm(ph_anndtrn ~ sin(2*pi*decdays) + cos(2*pi*decdays), data = datsub, na.action = na.exclude)
+      # dlymod <- gam(ph_anndtrn ~ s(hrs, bs = 'cc'), data = datsub, na.action = na.exclude)
       
       dlyprd <- datsub %>% 
         mutate(
@@ -173,7 +176,7 @@ phres <- moddat %>%
   )
 ```
 
-pH time series for all cells plus estimated annual component. 
+pH time series for all locations plus estimated annual component. 
 
 ```{r, fig.height = 6, fig.width = 9}
 annplo <- phres %>% 
@@ -184,7 +187,7 @@ p <- ggplot(annplo, aes(x = datetime, y = pH)) +
   geom_line() + 
   geom_line(aes(y = ph_ann, col = 'Annual')) +
   scale_color_manual(values = 'red') + 
-  facet_wrap(~cell, ncol = 1) + 
+  facet_wrap(~loc, ncol = 1) + 
   theme_minimal() +
   theme(
     legend.position = 'top', 
@@ -196,7 +199,71 @@ p <- ggplot(annplo, aes(x = datetime, y = pH)) +
 p
 ```
 
-Estimated amplitudes for annual, daily, and tidal components for each cell. 
+pH time series for all locations 24 hour smooth detrended. 
+
+```{r, fig.height = 6, fig.width = 9}
+p <- ggplot(annplo, aes(x = datetime, y = ph_anndtrn)) + 
+  geom_line() + 
+  facet_wrap(~loc, ncol = 1) + 
+  theme_minimal() +
+  theme(
+    legend.position = 'top', 
+    legend.title = element_blank()
+  ) +
+  labs(
+    x = NULL
+  )
+p
+```
+
+pH time series for all locations 24 hour smooth detrended, daily sine wave. 
+
+```{r, fig.height = 6, fig.width = 9}
+dlyplo <- phres %>% 
+  select(dlyprd) %>% 
+  unnest('dlyprd') 
+
+p <- ggplot(dlyplo, aes(x = datetime, y = ph_anndtrn)) + 
+  geom_line() + 
+  geom_line(aes(y = ph_dly, col = 'Daily')) +
+  scale_color_manual(values = 'red') + 
+  facet_wrap(~loc, ncol = 1) + 
+  theme_minimal() +
+  theme(
+    legend.position = 'top', 
+    legend.title = element_blank()
+  ) +
+  labs(
+    x = NULL
+  )
+p
+```
+
+pH time series for all locations, observed and modelled. 
+
+```{r, fig.height = 6, fig.width = 9}
+dlyplo <- phres %>% 
+  select(dlyprd) %>% 
+  unnest('dlyprd') 
+
+p <- ggplot(dlyplo, aes(x = datetime, y = pH)) + 
+  geom_line() + 
+  geom_line(aes(y = ph_mod, col = 'Modelled')) +
+  scale_color_manual(values = 'red') + 
+  facet_wrap(~loc, ncol = 1) + 
+  theme_minimal() +
+  theme(
+    legend.position = 'top', 
+    legend.title = element_blank()
+  ) +
+  labs(
+    x = NULL
+  )
+p
+```
+
+
+Estimated amplitudes for annual, daily, and tidal components for each location. 
 
 ```{r, fig.height = 8, fig.width = 5}
 
@@ -207,7 +274,7 @@ rngplo <- phres %>%
 ggplot(rngplo, aes(x = var)) + 
   geom_errorbar(aes(ymin = minv, ymax = maxv)) + 
   geom_hline(yintercept = 0, linetype = 'dotted') + 
-  facet_wrap(~cell, ncol = 1) +
+  facet_wrap(~loc, ncol = 1) +
   theme_minimal() + 
   theme(
     panel.grid.major.x = element_blank(), 
@@ -220,7 +287,7 @@ ggplot(rngplo, aes(x = var)) +
   )
 ```
 
-Estimated amplitudes for annual, daily, and tidal components for each cell, alternative plot. 
+Estimated amplitudes for annual, daily, and tidal components for each location, alternative plot. 
 
 ```{r, fig.height = 4, fig.width = 10}
 
@@ -228,7 +295,7 @@ rngplo <- phres %>%
   select(rngs) %>% 
   unnest('rngs')
 
-ggplot(rngplo, aes(x = cell)) + 
+ggplot(rngplo, aes(x = loc)) + 
   geom_errorbar(aes(ymin = minv, ymax = maxv)) + 
   geom_hline(yintercept = 0, linetype = 'dotted') + 
   theme_minimal() + 
@@ -236,7 +303,8 @@ ggplot(rngplo, aes(x = cell)) +
   theme(
     panel.grid.major.x = element_blank(), 
     panel.grid.minor.y = element_blank(), 
-    panel.grid.minor.x = element_blank()
+    panel.grid.minor.x = element_blank(), 
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8)
   ) +
   labs(
     y = 'pH range', 
@@ -253,7 +321,7 @@ dlyrngplo <- phres %>%
 
 ggplot(dlyrngplo, aes(x = phdff)) + 
   geom_histogram() + 
-  facet_wrap(~cell, ncol = 1) + 
+  facet_wrap(~loc, ncol = 1) + 
   theme_minimal() + 
   labs(
     x = 'daily pH amplitude, May-Aug', 
