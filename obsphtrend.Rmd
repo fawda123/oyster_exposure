@@ -33,7 +33,8 @@ obsdat <- read.csv(here('data/raw/2018 WDNR pH sensor data - 2018 WDNR pH sensor
   unite('datetime', Date, TimePST, sep = ' ') %>% 
   mutate(
     datetime = mdy_hms(datetime, tz = 'Pacific/Pitcairn')
-  )
+  ) %>% 
+  filter(as.Date(datetime) <= ymd('2018-07-07') & as.Date(datetime) >= ymd('2018-05-25'))
 
 # decomp
 phres <- obsdat %>% 
