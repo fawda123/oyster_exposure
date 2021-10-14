@@ -1,0 +1,186 @@
+---
+title: "Evaluating dissolution response with exposure time below threshold"
+author: "M. W. Beck"
+output: html_document
+---
+
+```{r setup, warning = F, message = F}
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(knitr)
+
+opts_chunk$set(warning = FALSE, message = FALSE)
+
+trts <- tibble(
+  shrtlab = c("8.0C", "8.0A0.2", "7.7C", "7.7A0.2", "7.7A0.5"),
+  lngslab = c("8.0 Constant", "8.0 Fluctuating 0.2A", "7.7 Constant", "7.7 Fluctuating 0.2A", "7.7 Fluctuating 0.5A")
+)
+
+cols <- c('seagreen4', 'seagreen2', 'khaki4', 'khaki3', 'khaki2')
+names(cols) <- trts$shrtlab
+
+wks <- c(2, 4, 6)
+```
+
+Import dissolution data.
+
+```{r}
+# dissolution data
+dissdat <- read.csv('data/raw/SEM scoring datasheet_MRVERSION.csv') %>% 
+  clean_names() %>% 
+  filter(week != 0) %>% 
+  select(
+    jar, 
+    id = individual_id, 
+    species, 
+    week, 
+    trt = treatment,
+    rep, 
+    scr = dissolution_score1
+  ) %>% 
+  group_by(jar, id, species, week, trt) %>% 
+  summarise(
+    val = mean(scr, na.rm = T),
+    .groups = 'drop'
+  ) %>% 
+  mutate(
+    jar = factor(jar),
+    trt = factor(trt, levels = trts$shrtlab)
+  ) %>% 
+  group_by(species, week, trt) %>% 
+  summarise(
+    val = mean(val, na.rm = T), 
+    .groups = 'drop'
+    )
+```
+
+Function to estimate sine wave for each treatment.
+
+```{r}
+# function for creating sine wave
+sinefunc <- function(time_in, alpha = 0, beta = 1, freq = 1, phi = 0){
+  
+  # timestep per hour
+  time_step <- unique(diff(time_in))
+  
+  # set phi as difference in hours from start of time_in
+  phi <- min(time_in) + phi * 3600
+  phi<- as.numeric(difftime(phi, min(time_in)))
+  phi <- phi / time_step
+  
+  # get input values to cos func
+  in_vals <- seq(0, length(time_in), length = length(time_in))
+  in_vals <- in_vals / time_step
+  in_vals <- 2 * pi * in_vals * 1 / freq
+  
+  # wave
+  y <- alpha + beta * sin(in_vals + phi)
+  
+  return(y)
+  
+}
+```
+
+Create dataset for the treatments.
+
+```{r, fig.height = 8, fig.width = 9}
+trtdat <- '2021-01-01 00:00:00' %>% 
+  ymd_hms(tz = Sys.timezone()) %>% 
+  seq.POSIXt(., to = . + weeks(6), by = 'hours') %>% 
+  tibble(
+    datetime = .
+  ) %>% 
+  mutate(
+    `8.0C` = sinefunc(datetime, freq = 12, beta = 0, alpha = 8),
+    `8.0A0.2` = sinefunc(datetime, freq = 12, beta = 0.2, alpha = 8),
+    `7.7C` = sinefunc(datetime, freq = 24, beta = 0, alpha = 7.7),
+    `7.7A0.2` = sinefunc(datetime, freq = 24, beta = 0.2, alpha = 7.7),
+    `7.7A0.5` = sinefunc(datetime, freq = 24, beta = 0.5, alpha = 7.7)
+  ) %>% 
+  gather('trt', 'ph', -datetime) %>% 
+  mutate(
+    trt = factor(trt, levels = trts$shrtlab)
+  )
+
+ggplot(trtdat, aes(x = datetime, y = ph, color = trt)) + 
+  geom_line() + 
+  scale_x_datetime(date_breaks = '14 days', expand = c(0, 0), date_labels = c(' ', wks)) +
+  scale_colour_manual(values = cols, guide = F) +
+  facet_wrap(~trt, ncol = 1) +
+  theme_minimal() + 
+  labs(
+    x = 'Experiment week', 
+    y = 'pH'
+  )
+```
+
+Estimate time below a given pH threshold for each treatment.
+
+```{r, fig.height = 8, fig.width = 9}
+expdat <- seq(7, 8.5, by = 0.2) %>% 
+  tibble(thr = .) %>% 
+  group_by(thr) %>% 
+  nest() %>% 
+  mutate(
+    data = purrr::map(thr, function(thr){
+      
+      out <- trtdat %>% 
+        group_by(trt) %>% 
+        mutate(
+          hours = cumsum(ph <= thr)
+        )
+      
+      return(out)
+      
+    })
+  ) %>% 
+  unnest('data') %>% 
+  ungroup()
+
+toplo <- expdat 
+
+ggplot(toplo, aes(x = datetime, y = hours, col = trt)) + 
+  geom_line() +
+  facet_grid(trt ~ thr) + 
+  scale_colour_manual(values = cols, guide = F) +
+  theme_minimal() + 
+  scale_x_datetime(date_breaks = '14 days', expand = c(0, 0), date_labels = c(' ', wks)) +
+  labs(
+    x = 'Experiment week', 
+    y = 'Cumulative hours below threshold'
+  ) + 
+  theme(
+    legend.position = 'none'
+  )
+```
+
+Combine estimates for cumulative exposure with dissolution data for each week. 
+
+```{r, fig.height = 8, fig.width = 9}
+tocmp <- toplo %>% 
+  group_by(trt, thr) %>% 
+  mutate(
+    week = week(datetime) - min(week(datetime)), 
+    dups = duplicated(week)
+  ) %>% 
+  filter(week %in% wks & !dups) %>% 
+  select(trt, thr, hours, week) %>% 
+  full_join(dissdat, by = c('trt', 'week')) %>% 
+  filter()
+
+ggplot(tocmp, aes(x = hours, y = val, fill = trt, group = species)) + 
+  geom_point(pch = 21, color = 'black', size = 3) + 
+  scale_fill_manual(values = cols) +
+  facet_grid(thr~species) +
+  labs(
+    y = 'Mean dssolution', 
+    x = 'Cumulative hours below threshold'
+  ) + 
+  geom_smooth(method = 'lm', se  = F, color = 'black', show.legend = F) + 
+  theme_minimal() + 
+  theme(
+    legend.title = element_blank()
+  )
+```
+
