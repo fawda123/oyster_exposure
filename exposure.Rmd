@@ -118,7 +118,7 @@ ggplot(trtdat, aes(x = datetime, y = ph, color = trt)) +
 Estimate time below a given pH threshold for each treatment.
 
 ```{r, fig.height = 8, fig.width = 9}
-expdat <- seq(7, 8.5, by = 0.2) %>% 
+expdat <- seq(7, 8.4, by = 0.2) %>% 
   tibble(thr = .) %>% 
   group_by(thr) %>% 
   nest() %>% 
@@ -152,6 +152,51 @@ ggplot(toplo, aes(x = datetime, y = hours, col = trt)) +
   ) + 
   theme(
     legend.position = 'none'
+  )
+```
+
+An alternative view of cumulative exposure. 
+
+```{r, fig.height = 3, fig.width = 8}
+expdat <- seq(7, 8.4, by = 0.01) %>% 
+  tibble(thr = .) %>% 
+  group_by(thr) %>% 
+  nest() %>% 
+  mutate(
+    data = purrr::map(thr, function(thr){
+      
+      out <- trtdat %>% 
+        group_by(trt) %>% 
+        mutate(
+          hours = cumsum(ph <= thr)
+        )
+      
+      return(out)
+      
+    })
+  ) %>% 
+  unnest('data') %>% 
+  ungroup()
+
+toplo1 <- expdat %>% 
+  filter(hour(datetime) %in% c(0, 12))
+
+ggplot(toplo1, aes(x = datetime, y = thr, fill = hours)) + 
+  geom_tile(alpha = 0.6) +
+  facet_wrap(~trt, ncol = 5) + 
+  scale_y_continuous(expand = c(0, 0), breaks = seq(7, 8.5, by = 0.1))  +
+  scale_fill_gradientn(colours = c('lightgrey', 'dodgerblue', 'firebrick1')) +
+  theme_minimal() + 
+  scale_x_datetime(date_breaks = '14 days', expand = c(0, 0), date_labels = c(' ', wks)) +
+  labs(
+    x = 'Experiment week', 
+    y = 'pH threshold',
+    fill = 'Cumulative hours below threshold'
+  ) + 
+  theme(
+    legend.position = 'top', 
+    panel.grid.minor.y = element_blank(),
+    axis.text.y = element_text(size = 8)
   )
 ```
 
