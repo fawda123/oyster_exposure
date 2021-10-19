@@ -679,34 +679,6 @@ names(cols) <- trts$shrtlab
 
 wks <- c(2, 4, 6)
 
-# dissolution data
-dissdat <- read.csv('data/raw/SEM scoring datasheet_MRVERSION.csv') %>% 
-  clean_names() %>% 
-  filter(week != 0) %>% 
-  select(
-    jar, 
-    id = individual_id, 
-    species, 
-    week, 
-    trt = treatment,
-    rep, 
-    scr = dissolution_score1
-  ) %>% 
-  group_by(jar, id, species, week, trt) %>% 
-  summarise(
-    val = mean(scr, na.rm = T),
-    .groups = 'drop'
-  ) %>% 
-  mutate(
-    jar = factor(jar),
-    trt = factor(trt, levels = trts$shrtlab)
-  ) %>% 
-  group_by(species, week, trt) %>% 
-  summarise(
-    val = mean(val, na.rm = T), 
-    .groups = 'drop'
-    )
-
 # function for creating sine wave
 sinefunc <- function(time_in, alpha = 0, beta = 1, freq = 1, phi = 0){
   
