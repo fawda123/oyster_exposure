@@ -763,7 +763,7 @@ p2 <- ggplot(toplo1, aes(x = datetime, y = thr, fill = hours)) +
   geom_tile(alpha = 0.6) +
   facet_wrap(~trt, ncol = 5) + 
   scale_y_continuous(expand = c(0, 0), breaks = seq(7, 8.5, by = 0.1))  +
-  scale_fill_gradientn(colours = c('lightgrey', 'dodgerblue', 'firebrick1')) +
+  scale_fill_gradientn(colours = c('white', 'dodgerblue', 'firebrick1')) +
   theme_minimal() + 
   scale_x_datetime(date_breaks = '14 days', expand = c(0, 0), date_labels = c(' ', wks)) +
   labs(
