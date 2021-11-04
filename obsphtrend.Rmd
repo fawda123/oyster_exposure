@@ -350,7 +350,8 @@ obsdat1 <- read.csv(here('data/raw/SB1_1m_PMEL_2017-2018.csv')) %>%
   unite('time', hour, min, sec, sep = ':') %>% 
   unite('datetime', date, time, sep = ' ') %>% 
   mutate(
-    datetime = mdy_hms(datetime, tz = 'Pacific/Pitcairn'), 
+    datetime = mdy_hms(datetime, tz = 'UTC'), 
+    datetime = with_tz(datetime, tz = 'Pacific/Pitcairn'),
     datetime = floor_date(datetime, unit = 'hour'),
     typ = 'original'
   ) %>% 
@@ -362,7 +363,8 @@ obsdat2 <- read.csv(here('data/raw/SB1_1m_PMEL_2018_resampled.csv')) %>%
   unite('time', hour, min, sec, sep = ':') %>% 
   unite('datetime', date, time, sep = ' ') %>% 
   mutate(
-    datetime = mdy_hms(datetime, tz = 'Pacific/Pitcairn'), 
+    datetime = mdy_hms(datetime, tz = 'UTC'), 
+    datetime = with_tz(datetime, tz = 'Pacific/Pitcairn'),
     typ = 'resampled'
   ) %>% 
   filter(as.Date(datetime) <= subdts[2] & as.Date(datetime) >= subdts[1]) %>% 
