@@ -1,0 +1,141 @@
+---
+title: "Puget Sound observed pH time series detiding"
+author: "M. W. Beck"
+output: html_document
+---
+  
+```{r setup, warning = F, message = F}
+library(knitr)
+library(tidyverse)
+library(readxl)
+library(here)
+library(lubridate)
+library(janitor)
+library(WtRegDO)
+
+opts_chunk$set(warning = FALSE, message = FALSE)
+
+obsdat1 <- read.csv(here('data/raw/2018 WDNR pH sensor data - 2018 WDNR pH sensor data.csv.csv')) %>% 
+  select(Date, TimePST, matches('pH')) %>% 
+  gather('loc', 'pH', -Date, -TimePST) %>% 
+  mutate(
+    loc = case_when(
+      grepl('Buoy', loc) ~ 'WDNR Buoy', 
+      grepl('Edge', loc) ~ 'WDNR Farm edge', 
+      grepl('Mid', loc) ~ 'WDNR Farm center'
+    ), 
+    loc = factor(loc, levels = c('WDNR Buoy', 'WDNR Farm edge', 'WDNR Farm center'))
+  ) %>% 
+  unite('datetime', Date, TimePST, sep = ' ') %>% 
+  mutate(
+    datetime = mdy_hms(datetime, tz = 'Pacific/Pitcairn')
+  ) %>% 
+  filter(as.Date(datetime) <= ymd('2018-07-07') & as.Date(datetime) >= ymd('2018-05-25')) %>% 
+  filter(minute(datetime) == 0)
+
+subdts <- ymd(c('2018-05-25', '2018-07-06'))
+
+# original data
+obsdat2 <- read.csv(here('data/raw/SB1_1m_PMEL_2017-2018.csv')) %>% 
+  group_by(year, month, day, hour) %>% 
+  sample_n(1) %>% # sometimes there's more than one measurement per hour
+  ungroup %>% 
+  unite('date', month, day, year, sep = '-') %>% 
+  unite('time', hour, min, sec, sep = ':') %>% 
+  unite('datetime', date, time, sep = ' ') %>% 
+  mutate(
+    datetime = mdy_hms(datetime, tz = 'UTC'), 
+    datetime = with_tz(datetime, tz = 'Pacific/Pitcairn'),
+    datetime = floor_date(datetime, unit = 'hour'),
+    loc = 'SB1 1m'
+  ) %>% 
+  rename(pH = pH_tot) %>% 
+  filter(as.Date(datetime) <= subdts[2] & as.Date(datetime) >= subdts[1])
+
+# combine
+obsdat <- bind_rows(obsdat1, obsdat2)
+
+# tidal data
+tiddat <- read.csv(here('data/raw/pstide_seg518_2018.csv'), skip = 12) %>% 
+  clean_names() %>%
+  rename(
+    datetime = date_time_tz, 
+    Tide = height
+  ) %>% 
+  mutate(
+    datetime = ymd_hm(datetime), 
+    datetime = with_tz(datetime, tzone = 'Pacific/Pitcairn')
+  ) %>% 
+  filter(minute(datetime) == 0) %>% 
+  filter(datetime >= min(obsdat$datetime) & datetime <= max(obsdat$datetime))
+
+# combine ph and tidal data
+alldat <- obsdat %>% 
+  full_join(tiddat, by = 'datetime') %>% 
+  rename(DateTimeStamp = datetime) 
+
+lat <- 47.87167
+long <- -122.60491
+tz <- 'Pacific/Pitcairn'
+
+dtdres <- alldat %>% 
+  group_by(loc) %>% 
+  nest() %>% 
+  mutate(
+    dtd = purrr::map(data, function(x){
+      
+      dtd <- wtreg(x, parallel = F, wins = list(8, 3, 0.7), DO_obs = 'pH', 
+                   tz = tz, lat = lat, long = long)
+      
+      out <- dtd %>% 
+        select(
+          DateTimeStamp, 
+          metab_date,
+          pH = DO_obs, 
+          pH_dtd = DO_nrm
+        ) %>% 
+        gather('var', 'val',  -DateTimeStamp, -metab_date) 
+      
+      return(out)
+      
+    })
+  ) %>% 
+  select(loc, dtd) %>% 
+  unnest('dtd')
+```
+
+Plots of observed pH (red) and detided pH (blue), by location. 
+
+```{r, fig.height = 7, fig.width = 9}
+ggplot(dtdres, aes(x = DateTimeStamp, y = val, color = var)) +
+  geom_line() +
+  facet_wrap(~loc, ncol = 1, scales = 'free_y') +
+  theme_minimal() + 
+  labs(
+    y = 'pH', 
+    x = NULL, 
+    color = NULL
+  )
+```
+
+Plots of diel pH range for observed pH (top) and detided pH (bottom), by locatin.
+
+```{r, fig.height = 4, fig.width = 9}
+dtdsum <- dtdres %>% 
+  group_by(loc, metab_date, var) %>% 
+  summarise(
+    val = diff(range(val)), 
+    .groups = 'drop'
+  )
+
+ggplot(dtdsum, aes(x = metab_date, y = val, color = loc)) +
+  geom_line(size = 1) + 
+  facet_wrap(~var, ncol = 1, scales = 'free_y') +
+  theme_minimal() + 
+  labs(
+    x = NULL, 
+    y = 'daily pH range', 
+    color = NULL
+  )
+
+```

@@ -26,4 +26,7 @@ Puget Sound modelled pH decomposition: <https://fawda123.github.io/oyster_exposu
 
 Puget Sound observed pH decomposition: <https://fawda123.github.io/oyster_exposure/obsphtrend.html>
 
+Puget Sound detiding pH: <https://fawda123.github.io/oyster_exposure/detiding.html>
+
 Evaluating dissolution response with exposure time below threshold: <https://fawda123.github.io/oyster_exposure/exposure.html>
+
