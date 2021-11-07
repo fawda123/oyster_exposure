@@ -106,7 +106,7 @@ dtdres <- alldat %>%
 
 This plot provides an indication of when detiding may not be effective, shown as a moving window correlation of change in tide vs sun angle. Large negative or positive correlations show when the two are confounded and when detiding may remove too much biological signal of productivity. This can be interpreted relative to the wavelet scalogram (left: pH signal is out of phase with tide, right: pH and tide signals are in phase with each other, down: tide signal leads the pH signal, up: pH signal leads the tide signal).
 
-```{r, fig.height = 2, fig.widht = 8}
+```{r, fig.height = 2, fig.width = 8}
 tochk <- alldat %>% 
   select(DateTimeStamp, Tide) %>% 
   unique
@@ -133,17 +133,28 @@ Plots of diel pH range for observed pH (top) and detided pH (bottom), by locatin
 dtdsum <- dtdres %>% 
   group_by(loc, metab_date, var) %>% 
   summarise(
-    val = diff(range(val)), 
+    rng = diff(range(val, na.rm = T)), 
+    ave = mean(val, na.rm = T),
     .groups = 'drop'
   )
 
-ggplot(dtdsum, aes(x = metab_date, y = val, color = loc)) +
+ggplot(dtdsum, aes(x = metab_date, y = rng, color = loc)) +
   geom_line(size = 1) + 
   facet_wrap(~var, ncol = 1, scales = 'free_y') +
   theme_minimal() + 
   labs(
     x = NULL, 
     y = 'daily pH range', 
+    color = NULL
+  )
+
+ggplot(dtdsum, aes(x = metab_date, y = ave, color = loc)) +
+  geom_line(size = 1) + 
+  facet_wrap(~var, ncol = 1, scales = 'free_y') +
+  theme_minimal() + 
+  labs(
+    x = NULL, 
+    y = 'daily pH average', 
     color = NULL
   )
 
