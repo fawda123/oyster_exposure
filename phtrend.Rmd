@@ -265,20 +265,22 @@ The methods were repeated for all sites to identify dominant periods and their a
 
 ```{r}
 phres <- tibble(
-  site = c('elkvm', 'nocec', 'nartb', 'pdbby')
+    site = c('kacss', 'sfbcc', 'sfbgc', 'tjrbr'), 
+    tz = c('Pacific/Gambier', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn')
   ) %>% 
-  group_by(site) %>% 
+  group_by(site, tz) %>% 
   nest() %>% 
   # select(-data) %>% 
   mutate(
-    annprd = pmap(list(site, data), function(site, data){
+    annprd = pmap(list(site, tz, data), function(site, tz, data){
       
       fl <- paste0('data/raw/', site, 'ph.csv')
       dat <- read.csv(here(fl)) %>% 
         mutate(
-          DateTimeStamp = ymd_hms(DateTimeStamp, tz = 'Pacific/Pitcairn')
+          DateTimeStamp = ymd_hms(DateTimeStamp, tz = tz)
         ) %>% 
         filter(minute(DateTimeStamp) == 0) %>% 
+        filter(year(DateTimeStamp) >= 2010 & year(DateTimeStamp) < 2021) %>% 
         mutate(dectime = decimal_date(DateTimeStamp))
       
       annmod <- lm(pH ~ sin(2*pi*dectime) + cos(2*pi*dectime), data = dat, na.action = na.exclude)
@@ -499,8 +501,8 @@ totab1 <- phres %>%
     minv = paste0('(', minv, ', '), 
     maxv = paste0(maxv, ')')
   ) %>% 
-  unite('rng', avev, minv, maxv, sep = '')
-
+  unite('rng', avev, minv, maxv, sep = '') %>% 
+  select(-tz)
 
 totab2 <- phres %>% 
   select(rngs) %>% 
@@ -511,6 +513,7 @@ totab2 <- phres %>%
     amp = round(amp, 3)
   ) %>% 
   spread(var, amp)
+
 totab3 <- phres %>% 
   select(dlyrng) %>% 
   unnest('dlyrng') %>% 
@@ -549,6 +552,6 @@ download_this(
   icon = "fa fa-save"
 )
 
-knitr::kable(totab, caption = 'Summary statistics of pH for four NERRS sites (Elkhorn Slough Vierra Mouth, Narragansett Bay T-Wharf Bottom, North Carolina East Cribbing, and Padilla Bay Bayview Channel).  Summaries include average (min/max) and standard deviation from a ten year record from 2010 to 2020 and estimates of amplitudes for decomposed periods from the pH time series.  The annual amplitude is estimated from the complete time series, whereas the daily, and tidal constituents (O1 25.82 hours, K1 23.93, N2 12.66, S2 12, and M2 12.42) are based on estimates from May to August 2012.  The min and max daily amplitudes represent the range of amplitudes observed as the sum of the separate components from the above rows.')
+knitr::kable(totab, caption = 'Summary statistics of pH for four NERRS sites (Kachemak Bay Seldovia Surface, San Francisco Bay China Camp, San Francisco Bay Gallinas Creek, and Tijuana River Boca Rio).  Summaries include average (min/max) and standard deviation from a ten year record from 2010 to 2020 and estimates of amplitudes for decomposed periods from the pH time series.  The annual amplitude is estimated from the complete time series, whereas the daily, and tidal constituents (O1 25.82 hours, K1 23.93, N2 12.66, S2 12, and M2 12.42) are based on estimates from May to August 2012.  The min and max daily amplitudes represent the range of amplitudes observed as the sum of the separate components from the above rows.')
 ```
 
