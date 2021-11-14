@@ -15,13 +15,13 @@ library(WtRegDO)
 
 opts_chunk$set(warning = FALSE, message = FALSE)
 
+# buoy, farm WDNR
 obsdat1 <- read.csv(here('data/raw/2018 WDNR pH sensor data - 2018 WDNR pH sensor data.csv.csv')) %>% 
-  select(Date, TimePST, matches('pH')) %>% 
+  select(Date, TimePST, BuoypHAG, MidpHP1) %>% 
   gather('loc', 'pH', -Date, -TimePST) %>% 
   mutate(
     loc = case_when(
       grepl('Buoy', loc) ~ 'WDNR Buoy', 
-      grepl('Edge', loc) ~ 'WDNR Farm edge', 
       grepl('Mid', loc) ~ 'WDNR Farm center'
     ), 
     loc = factor(loc, levels = c('WDNR Buoy', 'WDNR Farm edge', 'WDNR Farm center'))
@@ -35,7 +35,7 @@ obsdat1 <- read.csv(here('data/raw/2018 WDNR pH sensor data - 2018 WDNR pH senso
 
 subdts <- ymd(c('2018-05-25', '2018-07-06'))
 
-# original data
+# SB1 1m
 obsdat2 <- read.csv(here('data/raw/SB1_1m_PMEL_2017-2018.csv')) %>% 
   group_by(year, month, day, hour) %>% 
   sample_n(1) %>% # sometimes there's more than one measurement per hour
@@ -52,8 +52,25 @@ obsdat2 <- read.csv(here('data/raw/SB1_1m_PMEL_2017-2018.csv')) %>%
   rename(pH = pH_tot) %>% 
   filter(as.Date(datetime) <= subdts[2] & as.Date(datetime) >= subdts[1])
 
+# NB1 3m
+obsdat3 <- read.csv(here('data/raw/NB1_3m_SeaFET001_pH_tot.csv')) %>% 
+  group_by(year, month, day, hour) %>% 
+  sample_n(1) %>% # sometimes there's more than one measurement per hour
+  ungroup %>% 
+  unite('date', month, day, year, sep = '-') %>% 
+  unite('time', hour, min, sec, sep = ':') %>% 
+  unite('datetime', date, time, sep = ' ') %>% 
+  mutate(
+    datetime = mdy_hms(datetime, tz = 'UTC'), 
+    datetime = with_tz(datetime, tz = 'Pacific/Pitcairn'),
+    datetime = floor_date(datetime, unit = 'hour'),
+    loc = 'NB1 3m'
+  ) %>% 
+  rename(pH = pH_tot) %>% 
+  filter(as.Date(datetime) <= subdts[2] & as.Date(datetime) >= subdts[1])
+
 # combine
-obsdat <- bind_rows(obsdat1, obsdat2)
+obsdat <- bind_rows(obsdat1, obsdat2, obsdat3)
 
 # tidal data from ADCP
 tiddat <- read.csv(here('data/raw/SL1_Lander_depth_UTC.csv')) %>%
