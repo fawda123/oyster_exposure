@@ -720,7 +720,7 @@ trtdat <- '2021-01-01 00:00:00' %>%
     trt = factor(trt, levels = trts$shrtlab)
   )
 
-expdat <- seq(7, 8.4, by = 0.01) %>% 
+expdat <- seq(7.2, 8.3, by = 0.01) %>% 
   tibble(thr = .) %>% 
   group_by(thr) %>% 
   nest() %>% 
@@ -780,7 +780,7 @@ p2 <- ggplot(toplo1, aes(x = datetime, y = thr, fill = hours)) +
   guides(fill = guide_colourbar(barheight = 0.5, barwidth = 10))
 
 p <- p1 + p2 + plot_layout(ncol = 1, heights = c(0.3, 1))
-jpeg('figs/exposuretime.jpg', height = 4, width = 10, units = 'in', res = 300, family = 'serif')
+jpeg('figs/exposuretime.jpg', height = 4.5, width = 10, units = 'in', res = 300, family = 'serif')
 p
 dev.off()
 ```
