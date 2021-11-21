@@ -264,9 +264,10 @@ ggplot(pddlyrng, aes(x = phdff)) +
 The methods were repeated for all sites to identify dominant periods and their amplitudes. 
 
 ```{r}
+sts <- c('kacss', 'kach3', 'pdbgs', 'pdbby', 'sosch', 'sosva', 'sfbcc', 'sfbgc', 'elkvm', 'elknm', 'tjrbr', 'tjros')
 phres <- tibble(
-    site = c('kacss', 'sfbcc', 'sfbgc', 'tjrbr'), 
-    tz = c('Pacific/Gambier', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn')
+    site = sts, 
+    tz = c('Pacific/Gambier', 'Pacific/Gambier', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn')
   ) %>% 
   group_by(site, tz) %>% 
   nest() %>% 
@@ -411,12 +412,15 @@ phres <- tibble(
       
     })
   ) %>% 
-  mutate(site = toupper(site))
+  mutate(
+    site = toupper(site),
+    site = factor(site, levels = toupper(sts))
+  )
 ```
 
 pH time series for all sites. 
 
-```{r, fig.height = 9, fig.width = 9}
+```{r, fig.height = 10, fig.width = 9}
 annplo <- phres %>% 
   select(annprd) %>% 
   unnest('annprd') 
@@ -432,14 +436,14 @@ p
 ```
 
 April to August time series for 2012 used to predict daily and tidal components. 
-```{r, fig.height = 9, fig.width = 9}
+```{r, fig.height = 10, fig.width = 9}
 dlyplo <- phres %>% 
   select(dlyprd) %>% 
   unnest('dlyprd')
 
 p <- ggplot(dlyplo, aes(x = DateTimeStamp, y = pH)) + 
   geom_line() + 
-  facet_wrap(~StationCode, ncol = 1) + 
+  facet_wrap(~site, ncol = 1) + 
   theme_minimal() +
   labs(
     x = NULL
@@ -449,7 +453,7 @@ p
 
 Estimated amplitudes for annual, daily, and tidal components for each site. 
 
-```{r, fig.height = 8, fig.width = 5}
+```{r, fig.height = 9, fig.width = 5}
 
 rngplo <- phres %>% 
   select(rngs) %>% 
@@ -473,7 +477,7 @@ ggplot(rngplo, aes(x = var)) +
 
 Distribution of total range of pH across days from May to August 2012. 
 
-```{r, fig.height = 7, fig.width = 6}
+```{r, fig.height = 9, fig.width = 6}
 dlyrngplo <- phres %>% 
   select(dlyrng) %>% 
   unnest('dlyrng')
@@ -552,6 +556,6 @@ download_this(
   icon = "fa fa-save"
 )
 
-knitr::kable(totab, caption = 'Summary statistics of pH for four NERRS sites (Kachemak Bay Seldovia Surface, San Francisco Bay China Camp, San Francisco Bay Gallinas Creek, and Tijuana River Boca Rio).  Summaries include average (min/max) and standard deviation from a ten year record from 2010 to 2020 and estimates of amplitudes for decomposed periods from the pH time series.  The annual amplitude is estimated from the complete time series, whereas the daily, and tidal constituents (O1 25.82 hours, K1 23.93, N2 12.66, S2 12, and M2 12.42) are based on estimates from May to August 2012.  The min and max daily amplitudes represent the range of amplitudes observed as the sum of the separate components from the above rows.')
+knitr::kable(totab, caption = 'Summary statistics of pH for twelve NERR stations at six NERR sites (from north to south Kachemak Bay, Padilla Bay, South Slough, San Francisco Bay, Elkhorn Slough, and Tijuana River).  Summaries include average (min/max) and standard deviation from a ten year record from 2010 to 2020 and estimates of amplitudes for decomposed periods from the pH time series.  The annual amplitude is estimated from the complete time series, whereas the daily, and tidal constituents (O1 25.82 hours, K1 23.93, N2 12.66, S2 12, and M2 12.42) are based on estimates from May to August 2012.  The min and max daily amplitudes represent the range of amplitudes observed as the sum of the separate components from the above rows.')
 ```
 
