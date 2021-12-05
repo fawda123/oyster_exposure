@@ -22,6 +22,7 @@ library(shiny)
 library(janitor)
 library(patchwork)
 library(modelbased)
+library(DescTools)
 
 source('R/funcs.R')
 
@@ -607,6 +608,77 @@ respdatmodsall <- respdat %>%
       
     })
   )
+
+# mean comparisons
+meanplos <- respdat %>% 
+  group_by(species, week, trt) %>% 
+  filter(!is.na(val)) %>% 
+  filter(val > 0) %>% 
+  summarise(
+    artmean = mean(val), 
+    artmeanhi = t.test(val)$conf.int[2], 
+    artmeanlo = t.test(val)$conf.int[1], 
+    geomean = Gmean(val),
+    geomeanhi = Gmean(val, conf.level = 0.95)[3],
+    geomeanlo = Gmean(val, conf.level = 0.95)[2],
+    n = n(),
+    .groups = 'drop'
+  ) %>%  
+  group_by(species) %>% 
+  nest %>% 
+  mutate(
+    plos = purrr::pmap(list(species, data), function(species, data){
+      
+      # sample size
+      n <- sum(data$n)
+
+      # axis limits
+      lims <- data %>% 
+        select(-week, -trt, -n) %>% 
+        range
+      
+      # labels
+      subttl <- paste0('Respiration (umol O2 hr-1 g-1), ', species, ' oyster')
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      
+      # mean estimate plots
+      p1 <- ggplot(data, aes(x = week, y = artmean, group = trt, colour = trt, fill = trt)) + 
+        geom_errorbar(aes(ymin = artmeanlo, ymax = artmeanhi, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
+        geom_line(position = position_dodge(0.3)) + 
+        geom_point(size = 3, position = position_dodge(0.3), pch = 21, colour = 'black') + 
+        labs(x = 'Exposure week', y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates, arithmetic', subtitle = subttl) + 
+        scale_colour_manual(values = cls, drop = F) + 
+        scale_fill_manual(values = cls, drop = F) + 
+        scale_y_continuous(limits = lims) + 
+        scale_x_continuous(breaks = c(2, 4, 6)) +
+        theme_ipsum() + 
+        theme(
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), 
+          legend.title = element_blank()
+        )
+      
+      # mean estimate plots
+      p2 <- ggplot(data, aes(x = week, y = geomean, group = trt, colour = trt, fill = trt)) + 
+        geom_errorbar(aes(ymin = geomeanlo, ymax = geomeanhi, colour = trt), width = 0, position = position_dodge(0.3), size = 1) + 
+        geom_line(position = position_dodge(0.3)) + 
+        geom_point(size = 3, position = position_dodge(0.3), pch = 21, colour = 'black') + 
+        labs(x = 'Exposure week', y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates, geometric', caption = captns) + 
+        scale_colour_manual(values = cls, drop = F) + 
+        scale_fill_manual(values = cls, drop = F) + 
+        scale_y_continuous(limits = lims) + 
+        scale_x_continuous(breaks = c(2, 4, 6)) +
+        theme_ipsum() + 
+        theme(
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), 
+          legend.title = element_blank()
+        )
+
+      p1 + p2 + plot_layout(ncol = 2, guides = 'collect') 
+      
+    })
+  )
 ```
 
 ## Treatment effects only, all weeks combined {.tabset .tabset-pills}
@@ -909,3 +981,20 @@ dat %>%
 dat %>% pull(plomod)
 ```
 
+## Mean estimate comparisons {.tabset .tabset-pills}
+
+### Olympia oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '100%', results = 'hide', fig.align = 'center'}
+meanplos %>% 
+  filter(species == 'Olympia') %>% 
+  pull(plos)
+```
+
+### Pacific oyster
+
+```{r, fig.height = 5, fig.width = 10, out.width = '100%', results = 'hide', fig.align = 'center'}
+meanplos %>% 
+  filter(species == 'Pacific') %>% 
+  pull(plos)
+```
