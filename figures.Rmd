@@ -794,7 +794,7 @@ knitr::include_graphics('figs/exposuretime.jpg')
 
 ## NERRS pH ranges
 
-[download](figs/nerrsamp.jpg)
+[download](figs/nerrsphsum.jpg)
 ```{r, results = 'hide'}
 sts <- c('kacss', 'kach3', 'pdbgs', 'pdbby', 'sosch', 'sosva', 'sfbcc', 'sfbgc', 'elkvm', 'elknm', 'tjrbr', 'tjros')
 phres <- tibble(
