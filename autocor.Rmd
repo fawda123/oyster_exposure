@@ -1,0 +1,125 @@
+---
+title: "pH time series autocorrelation"
+author: "M. W. Beck"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+# {.tabset}
+
+```{r setup, warning = F, message = F}
+library(knitr)
+library(tidyverse)
+library(lubridate)
+library(readxl)
+library(here)
+
+opts_chunk$set(warning = FALSE, message = FALSE)
+
+phres <- tibble(
+    station = c('kacss', 'kach3', 'pdbgs', 'pdbby', 'sosch', 'sosva', 'sfbcc', 'sfbgc', 'elkvm', 'elknm', 'tjrbr', 'tjros'), 
+    site = factor(c('kac', 'kac', 'pdb', 'pdb', 'sos', 'sos', 'sfb', 'sfb', 'elk', 'elk', 'tjr', 'tjr'), 
+                  levels = c('kac', 'pdb', 'sos', 'sfb', 'elk', 'tjr'), 
+                  labels = c('kacss (outer), kach3 (inner)', 'pdbgs (outer), pdbby (inner)', 'sosch (outer), sosva (inner)', 'sfbcc (outer), sfbgc (inner)', 'elkvm (outer), elknm (inner)', 'tjrbr (outer), tjros (inner)')),
+    loc = factor(c('outer', 'inner', 'outer', 'inner', 'outer', 'inner', 'outer', 'inner', 'outer', 'inner', 'outer', 'inner'),
+                 levels = c('inner', 'outer')),
+    tz = c('Pacific/Gambier', 'Pacific/Gambier', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn', 'Pacific/Pitcairn')
+  ) %>% 
+  group_by(station, site, loc, tz) %>% 
+  nest() %>%  
+  mutate(
+    data = pmap(list(station, tz, data), function(station, tz, data){
+      
+      fl <- paste0('data/raw/', station, 'ph.csv')
+      out <- read.csv(here(fl)) %>% 
+        mutate(
+          DateTimeStamp = ymd_hms(DateTimeStamp, tz = tz)
+        ) %>% 
+        filter(minute(DateTimeStamp) == 0) %>% 
+        filter(year(DateTimeStamp) == 2019) %>%
+        mutate(
+          ph_ann = stats::filter(pH, filter = rep(1, 24) / 24, sides = 1, method = 'convolution'),
+          ph_anndtrn = pH - ph_ann
+        ) %>% 
+        filter(month(DateTimeStamp) >= 5 & month(DateTimeStamp) <= 9)
+      
+      return(out)
+      
+    }), 
+    obscor = map(data, function(x){
+      
+      lg <- 28 * 24
+      
+      corv <- as.numeric(acf(x$pH, plot = F, lag.max = lg, na.action = na.pass)$acf) %>% 
+        tibble(
+          corv = ., 
+          lag = (0:lg) / 24
+        )
+      
+      return(corv)
+      
+    }), 
+    dtdcor = map(data, function(x){
+      
+       lg <- 28 * 24
+      
+      corv <- as.numeric(acf(x$ph_anndtrn, plot = F, lag.max = lg, na.action = na.pass)$acf) %>% 
+        tibble(
+          corv = ., 
+          lag = (0:lg) / 24
+        )
+      
+      return(corv)
+      
+    })
+  )
+```
+
+## Observed time series
+
+```{r, fig.height = 10, fig.width = 7}
+toplo <- phres %>% 
+  ungroup() %>% 
+  select(site, station, loc, obscor) %>% 
+  unnest('obscor')
+
+ggplot(toplo, aes(x = lag, y = corv, color = loc)) + 
+  geom_line() + 
+  facet_wrap(~site, ncol = 1) + 
+  theme_minimal() + 
+  scale_x_continuous(breaks = c(0, 7, 14, 21, 28)) + 
+  theme(
+    panel.grid.minor = element_blank(), 
+    legend.title = element_blank(), 
+    legend.position = 'top'
+  ) +
+  labs(
+    y = 'pH autocrrelation', 
+    x = 'Lag (days)'
+  )
+```
+
+## Detrended time series
+
+```{r, fig.height = 10, fig.width = 7}
+toplo <- phres %>% 
+  ungroup() %>% 
+  select(site, station, loc, dtdcor) %>% 
+  unnest('dtdcor')
+
+ggplot(toplo, aes(x = lag, y = corv, color = loc)) + 
+  geom_line() + 
+  facet_wrap(~site, ncol = 1) + 
+  theme_minimal() + 
+  scale_x_continuous(breaks = c(0, 7, 14, 21, 28)) + 
+  theme(
+    panel.grid.minor = element_blank(), 
+    legend.title = element_blank(), 
+    legend.position = 'top'
+  ) +
+  labs(
+    y = 'pH autocrrelation', 
+    x = 'Lag (days)'
+  )
+```
