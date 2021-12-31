@@ -317,7 +317,7 @@ ggplot(rngplo, aes(x = loc)) +
   )
 ```
 
-Distribution of total range of pH across days from May to August 2012. 
+Distribution of total range of pH across days. 
 
 ```{r, fig.height = 7, fig.width = 6}
 dlyrngplo <- phres %>% 
@@ -650,7 +650,7 @@ ggplot(rngplo, aes(x = typ)) +
   )
 ```
 
-Distribution of total range of pH across days from May to August 2012. 
+Distribution of total range of pH across days. 
 
 ```{r, fig.height = 5, fig.width = 6}
 dlyrngplo <- phres %>% 

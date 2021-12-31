@@ -842,8 +842,8 @@ phres <- tibble(
     dlyprd = map(annprd, function(annprd){
       
       datsub <- annprd %>% 
-        filter(year(DateTimeStamp) == 2012) %>% 
-        filter(month(DateTimeStamp) %in% c(5:8)) %>% 
+        filter(year(DateTimeStamp) == 2019) %>% 
+        filter(month(DateTimeStamp) %in% c(5:9)) %>% 
         mutate(
           decdays =  365 * (decimal_date(DateTimeStamp) - max(year(DateTimeStamp)))
         )
@@ -989,12 +989,12 @@ p2 <- ggplot(dlyrngplo, aes(x = phdff)) +
     subtitle = '(b) Combined pH amplitudes, all frequencies'
   )
 
-p <- p1 + p2 + plot_layout(ncol = 2) & theme(axis.text.y = element_text(size = 8))
+p <- p1 + p2 + plot_layout(ncol = 2) & theme(axis.text.y = element_text(size = 7))
 
 jpeg('figs/nerrsphsum.jpg', height = 8, width = 7, units = 'in', res = 300, family = 'serif')
 p
 dev.off()
 ```
-```{r nerrsphsum, fig.cap = "Results from decomposed pH time series from 2010 to 2020 for twelve NERR stations at six NERR sites (from north to south Kachemak Bay, Padilla Bay, South Slough, San Francisco Bay, Elkhorn Slough, and Tijuana River).  Figure (a) shows estimates of pH ranges (amplitudes) for decomposed periods from the pH time series.  The annual amplitude is estimated from the complete time series, whereas the daily and tidal constituents (O1 25.82 hours, K1 23.93, N2 12.66, S2 12, and M2 12.42) are based on estimates from May to August 2012.  Figure (b) shows the estimated amplitudes as the sum of the separate daily and tidal constituent components to represent the range in situ for any given day from May to August.", out.width = "80%", fig.align = 'center'}
+```{r nerrsphsum, fig.cap = "Results from decomposed pH time series from 2010 to 2020 for twelve NERR stations at six NERR sites (from north to south Kachemak Bay, Padilla Bay, South Slough, San Francisco Bay, Elkhorn Slough, and Tijuana River).  Figure (a) shows estimates of pH ranges (amplitudes) for decomposed periods from the pH time series.  The annual amplitude is estimated from the complete time series, whereas the daily and tidal constituents (O1 25.82 hours, K1 23.93, N2 12.66, S2 12, and M2 12.42) are based on estimates from May to September 2019.  Figure (b) shows the estimated amplitudes as the sum of the separate daily and tidal constituent components to represent the range in situ for any given day from May to September.", out.width = "80%", fig.align = 'center'}
 knitr::include_graphics('figs/nerrsphsum.jpg')
 ```

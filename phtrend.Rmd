@@ -310,8 +310,8 @@ phres <- tibble(
     dlyprd = map(annprd, function(annprd){
       
       datsub <- annprd %>% 
-        filter(year(DateTimeStamp) == 2012) %>% 
-        filter(month(DateTimeStamp) %in% c(5:8)) %>% 
+        filter(year(DateTimeStamp) == 2019) %>% 
+        filter(month(DateTimeStamp) %in% c(5:9)) %>% 
         mutate(
           decdays =  365 * (decimal_date(DateTimeStamp) - max(year(DateTimeStamp)))
         )
@@ -435,7 +435,7 @@ p <- ggplot(annplo, aes(x = DateTimeStamp, y = pH)) +
 p
 ```
 
-April to August time series for 2012 used to predict daily and tidal components. 
+May to September time series for 2019 used to predict daily and tidal components. 
 ```{r, fig.height = 10, fig.width = 9}
 dlyplo <- phres %>% 
   select(dlyprd) %>% 
@@ -475,7 +475,7 @@ ggplot(rngplo, aes(x = var)) +
   )
 ```
 
-Distribution of total range of pH across days from May to August 2012. 
+Distribution of total range of pH across days from May to September 2019. 
 
 ```{r, fig.height = 9, fig.width = 6}
 dlyrngplo <- phres %>% 
@@ -556,6 +556,6 @@ download_this(
   icon = "fa fa-save"
 )
 
-knitr::kable(totab, caption = 'Summary statistics of pH for twelve NERR stations at six NERR sites (from north to south Kachemak Bay, Padilla Bay, South Slough, San Francisco Bay, Elkhorn Slough, and Tijuana River).  Summaries include average (min/max) and standard deviation from a ten year record from 2010 to 2020 and estimates of amplitudes for decomposed periods from the pH time series.  The annual amplitude is estimated from the complete time series, whereas the daily, and tidal constituents (O1 25.82 hours, K1 23.93, N2 12.66, S2 12, and M2 12.42) are based on estimates from May to August 2012.  The min and max daily amplitudes represent the range of amplitudes observed as the sum of the separate components from the above rows.')
+knitr::kable(totab, caption = 'Summary statistics of pH for twelve NERR stations at six NERR sites (from north to south Kachemak Bay, Padilla Bay, South Slough, San Francisco Bay, Elkhorn Slough, and Tijuana River).  Summaries include average (min/max) and standard deviation from a ten year record from 2010 to 2020 and estimates of amplitudes for decomposed periods from the pH time series.  The annual amplitude is estimated from the complete time series, whereas the daily, and tidal constituents (O1 25.82 hours, K1 23.93, N2 12.66, S2 12, and M2 12.42) are based on estimates from May to September 2019.  The min and max daily amplitudes represent the range of amplitudes observed as the sum of the separate components from the above rows.')
 ```
 
