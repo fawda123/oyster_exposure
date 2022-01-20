@@ -30,5 +30,7 @@ Puget Sound detiding pH: <https://fawda123.github.io/oyster_exposure/detiding.ht
 
 Autocorrelation analysis at NERRS sites: <https://fawda123.github.io/oyster_exposure/autocor.html>
 
+Combining pH time series at Puget Sound based on tidal velocity: <https://fawda123.github.io/oyster_exposure/splice.html>
+
 Evaluating dissolution response with exposure time below threshold: <https://fawda123.github.io/oyster_exposure/exposure.html>
 

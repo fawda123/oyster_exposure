@@ -1,0 +1,204 @@
+---
+title: "Puget Sound kelp bed monitoring pH splice"
+author: "M. W. Beck"
+output: html_document
+---
+
+This document demonstrates a proof of concept for combining a pH signal from two locations that are tidally influenced.  The goal is to maximize the a potential pH signal originating from production/respiration activity with a kelp bed in Puget Sound. 
+
+First the required libraries are loaded. 
+
+```{r setup, message = F, warning = F}  
+library(knitr)
+library(sf)
+library(mapview)
+library(tidyverse)
+library(here)
+library(lubridate)
+library(patchwork)
+library(reactable)
+
+opts_chunk$set(warning = FALSE, message = FALSE)
+
+tab_fun <- function(datin, dig = 2, rows = 5){
+  
+  out <- reactable(datin,
+    defaultColDef = colDef(
+      footerStyle = list(fontWeight = "bold"),
+      format = colFormat(digits = dig, separators = F),
+      resizable = TRUE
+    ),
+    filterable = T,
+    defaultPageSize = rows
+  )
+  
+  return(out)
+  
+}
+```
+
+Then the pH data at SB1 and NB1 are loaded and combined. The data are subset to a usable time period in 2018. Note that the raw data are in UTC time zone, but converted to Pacific.  The data are also floored to hourly measurements.
+
+```{r}
+subdts <- ymd(c('2018-05-25', '2018-07-06'))
+
+# SB1 1m
+SB1 <- read.csv(here('data/raw/SB1_1m_PMEL_2017-2018.csv')) %>% 
+  mutate(loc = 'SB1 1m')
+
+# NB1 3m
+NB1 <- read.csv(here('data/raw/NB1_3m_SeaFET001_pH_tot.csv')) %>% 
+  mutate(loc = 'NB1 3m')
+
+phdat <- bind_rows(SB1, NB1) %>% 
+  group_by(year, month, day, hour, loc) %>% 
+  sample_n(1) %>% # sometimes there's more than one measurement per hour
+  ungroup %>% 
+  unite('date', month, day, year, sep = '-') %>% 
+  unite('time', hour, min, sec, sep = ':') %>% 
+  unite('datetime', date, time, sep = ' ') %>% 
+  mutate(
+    datetime = mdy_hms(datetime, tz = 'UTC'), 
+    datetime = with_tz(datetime, tz = 'Pacific/Pitcairn'),
+    datetime = floor_date(datetime, unit = 'hour')
+  ) %>% 
+  rename(pH = pH_tot) %>% 
+  filter(as.Date(datetime) <= subdts[2] & as.Date(datetime) >= subdts[1])
+
+tab_fun(phdat)
+```
+
+Then the velocity data are imported.  ADCP data were collected at two stations at the northern and southern edge of the kelp bed.  These data were pre-processed by Greg (email Jan. 5, 2022) to extract a velocity component along the main axis of the kelp bed as measure of flow in/out of the bed. A low-pass filter to smooth the data using a six hour window was also used. Positive values indicate seaward and negative values indicate landward.  Units are m/s and represent an average across the depth profile.  
+
+```{r}
+# velocity data
+sl1 <- read.csv(here('data/raw/SL1_Lander_swvel_UTC_resampled_smoothed_6hr.csv')) %>% 
+  mutate(loc = 'SL1')
+nl1 <- read.csv(here('data/raw/NL1_Lander_swvel_UTC_resampled_smoothed_6hr.csv')) %>% 
+  mutate(loc = 'NL1')
+
+veldat <- bind_rows(sl1, nl1) %>% 
+  unite('date', month, day, year, sep = '-') %>% 
+  unite('time', hour, min, sec, sep = ':') %>% 
+  unite('datetime', date, time, sep = ' ') %>% 
+  mutate(
+    datetime = mdy_hms(datetime, tz = 'UTC'), 
+    datetime = with_tz(datetime, tz = 'Pacific/Pitcairn')
+  ) %>% 
+  filter(minute(datetime) == 0)
+
+tab_fun(veldat)
+```
+
+The velocity vectors are plotted to show similarity between the locations. 
+```{r, fig.height = 4, fig.width = 9}
+p1 <- ggplot(veldat, aes(x = datetime, y = swvel, color = loc)) + 
+  geom_line() + 
+  theme_minimal() + 
+  theme(
+    legend.position = 'top', 
+    legend.title = element_blank()
+  ) +
+  labs(
+    color = NULL,
+    x = NULL, 
+    y = 'Velocity (m/s)'
+  )
+
+toplo <- veldat %>% 
+  pivot_wider(names_from = 'loc', values_from = swvel)
+
+p2 <- ggplot(toplo, aes(x = NL1, y = SL1)) + 
+  geom_point() + 
+  geom_abline(slope = 1, intercept = 0, col= 'red') +
+  theme_minimal()
+
+p1 + p2 + plot_layout(ncol = 2, widths = c(1, 0.35))
+```  
+
+The two velocity vectors are not lagged.
+
+```{r, fig.height = 4, fig.width = 5}
+ccf(toplo$SL1, toplo$NL1, lag = 10)
+```
+
+To verify the locations of the monitoring data, spatial data are imported and plotted. These locations are from John Mickett.  Note that the actual area where kelp are growing is less than the permitted area for the study.  Seaward (positive) velocities indicate flow towards NL1 and landward (negative) velocities indicate flow towards SL1.  The pH data at NB1 and SB1 are co-located at NL1 and SL1, respectively. 
+
+```{r, out.width = '100%'}
+prj <- 4326
+
+datloc <- tibble(
+    loc = c('NL1', 'SL1'),
+    lat = c(47.884679, 47.883446),
+    lng = c(-122.612950, -122.614291)
+  ) %>% 
+  st_as_sf(coords = c('lng', 'lat'), crs = prj)
+
+kelp <- tibble(
+    poly = c(rep('Permitted', 4), rep('Growing', 4)),
+    lat = c(47.885389, 47.8850, 47.88305, 47.882667, 47.88485, 47.88445, 47.8836, 47.8832),
+    lng = c(-122.613139, -122.6122, -122.6151, -122.614167, -122.6136, -122.61265, -122.61463, -122.61369)
+  ) %>% 
+  st_as_sf(coords = c('lng', 'lat'), crs = prj) %>% 
+  group_by(poly) %>% 
+  summarise() %>%
+  ungroup() %>% 
+  st_convex_hull()
+
+mapview(kelp,layer.name = 'Kelp area') + 
+  mapview(datloc, col.regions = c('red', 'blue'), layer.name = 'Stations')
+```
+
+Based on the above map, the pH time series from NB1 and SB1 will be combined to capture periods of time when water is flowing from the kelp bed to the sensor.  The time series from NB1 will be used when velocity is positive (seaward) and the pH time series from SB1 will be used when velocity is negative (landward).  This should provide an accurate signal of pH that accounts for tidal advection.  
+
+Two options for combining are assessed. 
+
+1. A simple binary combination of pH that uses NB1 when velocity is positive and SB1 when velocity is negative. 
+2. A weighted average of pH that combines NB1 and SB1, where the weights are proportional to the tidal velocity. 
+
+For both options, the velocity at NL1 will be used since it appears very similar to SL1.  All data are combined prior to "splicing".
+
+```{r}
+phwide <- phdat %>% 
+  pivot_wider(names_from = 'loc', values_from = 'pH')
+alldat <- veldat %>% 
+  filter(loc == 'NL1') %>% 
+  select(-loc) %>% 
+  full_join(phwide, by = 'datetime')
+tab_fun(alldat)  
+```
+
+## Binary combination
+
+This is just a simple yes/no for positive/negative values of the velocity component. 
+
+```{r}
+alldat <- alldat %>% 
+  mutate(
+    phcmb1 = case_when(
+      swvel > 0 ~ `NB1 3m`, 
+      swvel <= 0 ~ `SB1 1m`
+    )
+  )
+tab_fun(alldat)
+```
+
+## Weighted average combination
+
+The weights used to average NB1 and SB1 vary at each item step from 0-1 depending on the range of values in teh velocity vector.
+
+```{r}
+alldat <- alldat %>% 
+  mutate(
+    NBwt = scales::rescale(swvel, to = c(0, 1)), 
+    SBwt = 1 - NBwt
+  ) %>% 
+  rowwise() %>% 
+  mutate(
+    phcmb2 = weighted.mean(c(`NB1 3m`, `SB1 1m`), c(NBwt, SBwt))
+  ) %>% 
+  ungroup()
+
+tab_fun(alldat)
+```
+
