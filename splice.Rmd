@@ -224,14 +224,14 @@ p1 <- pbase %>%
     yaxis = list(title = 'm/s')
   )
 p2 <- pbase %>% 
-  add_trace(y = ~`NB1 3m`, name = 'NB1 3m', mode = 'lines', type = 'scatter', line=list(color = I(cols[1]))) %>%   
-  add_trace(y = ~`SB1 1m`, name = 'SB1 1m', mode = 'lines', type = 'scatter', line=list(color = I(cols[2]))) %>% 
+  add_trace(y = ~`NB1 3m`, name = 'NB1 3m', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[1]))) %>%   
+  add_trace(y = ~`SB1 1m`, name = 'SB1 1m', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[2]))) %>% 
   layout(
     yaxis = list(title = 'pH')
   )
 p3 <- pbase %>% 
-  add_trace(y = ~`phcmb1`, name = 'Combined binary', mode = 'lines', type = 'scatter', line=list(color = I(cols[3]))) %>% 
-  add_trace(y = ~`phcmb2`, name = 'Combined weighted', mode = 'lines', type = 'scatter', line=list(color = I(cols[4]))) %>% 
+  add_trace(y = ~`phcmb1`, name = 'Combined binary', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[3]))) %>% 
+  add_trace(y = ~`phcmb2`, name = 'Combined weighted', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[4]))) %>% 
   layout(
     yaxis = list(title = 'pH')
   )
@@ -296,12 +296,12 @@ toplo1 <- dtdsum %>%
   pivot_wider(names_from = 'loc', values_from = 'rng')
 
 p1 <- plot_ly(toplo1, x = ~date) %>% 
-  add_trace(y = ~`NB1 3m`, name = 'NB1 3m', mode = 'lines', type = 'scatter', line=list(color = I(cols[1]))) %>%   
-  add_trace(y = ~`SB1 1m`, name = 'SB1 1m', mode = 'lines', type = 'scatter', line=list(color = I(cols[2]))) %>% 
-  add_trace(y = ~`Combined binary`, name = 'Combined binary', mode = 'lines', type = 'scatter', line=list(color = I(cols[3]))) %>% 
-  add_trace(y = ~`Combined weighted`, name = 'Combined weighted', mode = 'lines', type = 'scatter', line=list(color = I(cols[4]))) %>%
-  add_trace(y = ~`WDNR Buoy`, name = 'WDNR Buoy', mode = 'lines', type = 'scatter', line=list(color = I(cols[5]))) %>% 
-  add_trace(y = ~`WDNR Farm center`, name = 'WDNR Farm center', mode = 'lines', type = 'scatter', line=list(color = I(cols[6]))) %>% 
+  add_trace(y = ~`NB1 3m`, name = 'NB1 3m', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[1]))) %>%   
+  add_trace(y = ~`SB1 1m`, name = 'SB1 1m', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[2]))) %>% 
+  add_trace(y = ~`Combined binary`, name = 'Combined binary', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[3]))) %>% 
+  add_trace(y = ~`Combined weighted`, name = 'Combined weighted', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[4]))) %>%
+  add_trace(y = ~`WDNR Buoy`, name = 'WDNR Buoy', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[5]))) %>% 
+  add_trace(y = ~`WDNR Farm center`, name = 'WDNR Farm center', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[6]))) %>% 
   layout(
     yaxis = list(title = 'diel pH range')
   )
@@ -312,12 +312,12 @@ toplo2 <- dtdsum %>%
   pivot_wider(names_from = 'loc', values_from = 'ave')
 
 p2 <- plot_ly(toplo2, x = ~date) %>% 
-  add_trace(y = ~`NB1 3m`, name = 'NB1 3m', mode = 'lines', type = 'scatter', line=list(color = I(cols[1]))) %>%   
-  add_trace(y = ~`SB1 1m`, name = 'SB1 1m', mode = 'lines', type = 'scatter', line=list(color = I(cols[2]))) %>% 
-  add_trace(y = ~`Combined binary`, name = 'Combined binary', mode = 'lines', type = 'scatter', line=list(color = I(cols[3]))) %>% 
-  add_trace(y = ~`Combined weighted`, name = 'Combined weighted', mode = 'lines', type = 'scatter', line=list(color = I(cols[4]))) %>%
-  add_trace(y = ~`WDNR Buoy`, name = 'WDNR Buoy', mode = 'lines', type = 'scatter', line=list(color = I(cols[5]))) %>% 
-  add_trace(y = ~`WDNR Farm center`, name = 'WDNR Farm center', mode = 'lines', type = 'scatter', line=list(color = I(cols[6]))) %>% 
+  add_trace(y = ~`NB1 3m`, name = 'NB1 3m', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[1]))) %>%   
+  add_trace(y = ~`SB1 1m`, name = 'SB1 1m', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[2]))) %>% 
+  add_trace(y = ~`Combined binary`, name = 'Combined binary', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[3]))) %>% 
+  add_trace(y = ~`Combined weighted`, name = 'Combined weighted', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[4]))) %>%
+  add_trace(y = ~`WDNR Buoy`, name = 'WDNR Buoy', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[5]))) %>% 
+  add_trace(y = ~`WDNR Farm center`, name = 'WDNR Farm center', mode = 'lines', type = 'scatter', line=list(color = col2rgb(cols[6]))) %>% 
   layout(
     yaxis = list(title = 'diel pH average')
   )
