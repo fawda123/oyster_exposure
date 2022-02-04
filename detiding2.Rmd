@@ -1,10 +1,17 @@
+---
+title: "Puget Sound observed pH time series detiding: Pt 2"
+author: "M. W. Beck"
+output: html_document
+---
+  
+```{r setup, warning = F, message = F}
 library(knitr)
 library(tidyverse)
 library(readxl)
 library(here)
 library(lubridate)
 library(janitor)
-library(WtRegDO)
+library(mgcv)
 
 opts_chunk$set(warning = FALSE, message = FALSE)
 
@@ -79,23 +86,11 @@ tiddat <- read.csv(here('data/raw/SL1_Lander_depth_UTC.csv')) %>%
   filter(minute(datetime) == 0 & second(datetime) == 0) %>% 
   filter(datetime >= min(obsdat$datetime) & datetime <= max(obsdat$datetime))
 
-# combine ph and tidal data
+# combine ph and tidal data, create variables needed for GAM
 alldat <- obsdat %>% 
   full_join(tiddat, by = 'datetime') %>% 
-  rename(DateTimeStamp = datetime) 
-
-lat <- 47.87167
-long <- -122.60491
-tz <- 'Pacific/Pitcairn'
-
-
-tmp <- alldat %>% 
-  filter(loc %in% 'WDNR Farm center')
-
-library(mgcv)
-
-tomod <- alldat %>% 
-  filter(loc %in% 'WDNR Farm center') %>% 
+  rename(DateTimeStamp = datetime) %>% 
+  group_by(loc) %>% 
   mutate(
     date = as.Date(DateTimeStamp, tz = attr(DateTimeStamp, 'tzone')),
     sec = second(DateTimeStamp),
@@ -106,22 +101,107 @@ tomod <- alldat %>%
     dec_hr = secs / (60 * 60),
     dec_day = as.numeric(mindate) + (secs / 86400)
   ) %>% 
-  select(DateTimeStamp, pH, Tide, dec_hr, dec_day)
+  select(DateTimeStamp, date, loc, pH, Tide, dec_hr, dec_day)
 
-modtmp <- gam(pH ~ s(dec_day, k = 40) + te(dec_hr, Tide, bs = c("cc", "tp")), data = tomod, 
-              knots = list(doy = c(0, 24), Tide = 40))
-
-modtmp <- gam(pH ~ te(dec_day, dec_hr, Tide, bs = c("tp", "cc", "tp")), data = tomod, 
-              knots = list(dec_day = 40, doy = c(0, 24), Tide = 40))
-
-toplo <- tomod %>% 
+dtdres <- alldat %>% 
+  group_by(loc) %>% 
+  nest() %>% 
   mutate(
-    pH_prd = predict(modtmp)
+    dtd = purrr::map(data, function(x){
+      
+      # mod <- gam(pH ~ te(dec_day, dec_hr, Tide, bs = c("tp", "cc", "tp")), data = x,
+                   # knots = list(doy = c(0, 24)))
+      
+      # mod <- gam(pH ~ s(dec_day, k = 70) + ti(dec_hr, Tide, bs = c("cc", "tp")), data = x,
+                   # knots = list(doy = c(0, 24), Tide = 40))
+      
+      mod <- gam(pH ~ dec_day + s(dec_day, k = 50) + 
+             s(dec_hr, bs = 'cc') + 
+             ti(dec_day, dec_hr ,bs = c('tp', 'cc')) + 
+             s(Tide, k = 40) + 
+             ti(Tide, dec_hr, bs= c('tp', 'cc')) + 
+             ti(Tide, dec_day, bs = c('tp', 'tp')) +
+             ti(Tide, dec_hr, dec_day, bs = c('tp', 'cc', 'tp')),
+           knots= list(dec_hr = c(0, 23)), select = T,
+           data = x)
+
+      # get flow-normalized data
+      prdnrm <- range(x$Tide) %>% 
+        {seq(.[1], .[2], length.out = 10)} %>% 
+        crossing(
+          Tide = ., 
+          x[, c('dec_hr', 'dec_day')]
+        ) %>% 
+        mutate(
+          prd = predict(mod, .)
+        ) %>% 
+        group_by(dec_day, dec_hr) %>% 
+        summarise(
+          pH_dtd = mean(prd, na.rm = T), 
+          .groups = 'drop'
+        )
+      
+      out <- x %>% 
+        full_join(prdnrm, by = c('dec_day', 'dec_hr')) %>% 
+        select(
+          DateTimeStamp, 
+          date,
+          pH,
+          pH_dtd
+        ) %>% 
+        gather('var', 'val',  -DateTimeStamp, -date) 
+      
+      return(out)
+      
+    })
+  ) %>% 
+  select(loc, dtd) %>% 
+  unnest('dtd')
+```
+
+Plots of observed pH (red) and detided pH (blue), by location. 
+
+```{r, fig.height = 7, fig.width = 9}
+ggplot(dtdres, aes(x = DateTimeStamp, y = val, color = var)) +
+  geom_line() +
+  facet_wrap(~loc, ncol = 1, scales = 'free_y') +
+  theme_minimal() + 
+  labs(
+    y = 'pH', 
+    x = NULL, 
+    color = NULL
+  )
+```
+
+Plots of diel pH range for observed pH (top) and detided pH (bottom), by location.
+
+```{r, fig.height = 4, fig.width = 9}
+dtdsum <- dtdres %>% 
+  group_by(loc, date, var) %>% 
+  summarise(
+    rng = diff(range(val, na.rm = T)), 
+    ave = mean(val, na.rm = T),
+    .groups = 'drop'
   )
 
-ggplot(toplo, aes(x = DateTimeStamp)) + 
-  geom_point(aes(y = pH)) + 
-  geom_line(aes(y = pH_prd), col = 'red')
+ggplot(dtdsum, aes(x = date, y = rng, color = loc)) +
+  geom_line(size = 1) + 
+  facet_wrap(~var, ncol = 1, scales = 'free_y') +
+  theme_minimal() + 
+  labs(
+    x = NULL, 
+    y = 'daily pH range', 
+    color = NULL
+  )
 
-# create prediction matrix
+ggplot(dtdsum, aes(x = date, y = ave, color = loc)) +
+  geom_line(size = 1) + 
+  facet_wrap(~var, ncol = 1, scales = 'free_y') +
+  theme_minimal() + 
+  labs(
+    x = NULL, 
+    y = 'daily pH average', 
+    color = NULL
+  )
 
+```
