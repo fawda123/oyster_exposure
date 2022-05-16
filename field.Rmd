@@ -1,7 +1,9 @@
 ---
 title: "Puget Sound field data"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  html_document:
+    code_folding: hide 
 ---
 
 ```{r setup, warning=FALSE, message=FALSE, echo = T}
@@ -10,10 +12,13 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(sjPlot)
 library(multcompView)
+library(modelbased)
+library(hrbrthemes)
+library(patchwork)
 library(here)
 
-# import oyster data
-dat <- read.csv(here::here('data/raw', 'field_data.csv'), stringsAsFactors = F) %>% 
+# oyster length/weight data
+sizdat <- read.csv(here('data/raw', 'field_data.csv'), stringsAsFactors = F) %>% 
   select(Exposure, Organism, Full_ID, Station, Group, Individual, Length_mm, Final_Weight) %>% 
   mutate(
     Station = factor(Station, levels = c('OUT', 'EDG', 'MID')), 
@@ -25,8 +30,16 @@ dat <- read.csv(here::here('data/raw', 'field_data.csv'), stringsAsFactors = F) 
   filter(!Organism %in% 'Mussels') %>% 
   gather('var', 'val', Length_mm, Weight)
 
-# proc
-datprc <- dat %>%
+# oyster dissolution data
+dissdat <- read.csv(here('data/raw', 'Scoring data_RM_NB (1).csv')) %>% 
+  rename(Exposure = Station) %>% 
+  mutate(
+    Exposure = factor(Exposure, levels = c('OUT', 'EDG', 'MID'), labels = c('Out', 'Edge', 'Mid'))
+  )
+
+
+# size models
+sizmod <- sizdat %>%
   group_by(Organism, var) %>% 
   nest() %>% 
   mutate(
@@ -50,8 +63,82 @@ datprc <- dat %>%
     })
   )
 
+# dissolution models
+dissmod <- dissdat %>% 
+  group_by(Organism) %>% 
+  nest %>% 
+  mutate(
+    lmmod = pmap(list(data), function(data){
+
+      out <- lm(Average.Score ~ Exposure, data = data)
+      
+      return(out)
+      
+    }),
+    anomod = map(lmmod, function(x){
+    
+      out <- anova(x)
+      
+      return(out)
+      
+    }), 
+    plomod = pmap(list(Organism, lmmod), function(Organism, lmmod){
+
+      # estimates
+      mnsval <- estimate_means(lmmod, 'Exposure')
+      cnsval <- estimate_contrasts(lmmod, 'Exposure') %>% 
+        mutate(
+          sig = ifelse(p < 0.05, 'sig', 'notsig'),
+          sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'significant'))
+        ) %>% 
+        unite('Contrast', Level1, Level2, sep = '-')
+
+      # sample size
+      n <- lmmod$model %>% nrow
+      
+      # labels
+      subttl <- paste0(Organism, ' oyster')
+      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      
+      # mean esimate plots
+      p1 <- ggplot(mnsval, aes(x = Exposure, y = Mean)) + 
+        geom_point(size = 3) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high), colour = 'black', size = 1) + 
+        labs(x = NULL, y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl) + 
+        theme_ipsum() + 
+        theme(
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) + 
+        coord_flip()
+      
+      # contrast plots
+      p2 <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) + 
+        geom_point(aes(colour = sig), size = 3) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = sig), size = 1) + 
+        labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', title = 'Treatment differences', subtitle = subttl,
+             caption = captns) +
+        theme_ipsum() + 
+        theme(
+          legend.title = element_blank(), 
+          legend.position = 'bottom', 
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank()
+        ) +
+        geom_hline(yintercept = 0, linetype = 'dotted', size = 1) + 
+        scale_colour_manual(drop = F, values = c('black', 'tomato1')) + 
+        coord_flip()
+      
+      p1 + p2 + plot_layout(ncol  = 2)   
+      
+      
+    })
+  )
 ```
 
+# {.tabset}
+
+## Length and weight
 
 ```{r fig.height = 4, fig.width = 4}
 plofun <- function(x){
@@ -66,28 +153,28 @@ plofun <- function(x){
   par(op)
 }
 
-datprc$plors[[1]]
-datprc$ltmod[[1]]
-plofun(datprc$phmod[[1]])
+sizmod$plors[[1]]
+sizmod$ltmod[[1]]
+plofun(sizmod$phmod[[1]])
 
-datprc$plors[[2]]
-datprc$ltmod[[2]]
-plofun(datprc$phmod[[2]])
+sizmod$plors[[2]]
+sizmod$ltmod[[2]]
+plofun(sizmod$phmod[[2]])
 
-datprc$plors[[3]]
-datprc$ltmod[[3]]
-plofun(datprc$phmod[[3]])
+sizmod$plors[[3]]
+sizmod$ltmod[[3]]
+plofun(sizmod$phmod[[3]])
 
-datprc$plors[[4]]
-datprc$ltmod[[4]]
-plofun(datprc$phmod[[4]])
+sizmod$plors[[4]]
+sizmod$ltmod[[4]]
+plofun(sizmod$phmod[[4]])
 ```
 
 Alternative plots, these show the post-hoc comparisons of the locations from an ANOVA of treatment x location, see the above plots for all comparisons:
 
-```{r, fig.height = 4, fig.width = 5, out.width = '60%', message = F}
+```{r, message = F, results = 'hide'}
 # Olympia
-toplo <- datprc %>% 
+toplo <- sizmod %>% 
   mutate(
     phmod = purrr::map(phmod, function(x){
       x$`Exposure:Station` %>% 
@@ -116,22 +203,48 @@ p <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) +
   geom_errorbar(aes(xmin = lwr, xmax = upr), position = position_dodge(width = 0.3), width = 0.2) + 
   facet_wrap(~var, scales = 'free_x', ncol = 2, strip.position = 'bottom', labeller = label_parsed) + 
   scale_linetype_manual(values = c('dashed', 'solid')) +
-  theme_bw() + 
+  theme_ipsum() + 
   theme(
-    strip.placement = 'outside', 
-    panel.grid.minor = element_blank(), 
+    strip.placement = 'outside',
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
     strip.background = element_blank(), 
-    axis.title = element_blank(), 
+    axis.title.y = element_blank(), 
     legend.title = element_blank(), 
-    legend.position = 'top', 
-    strip.text = element_text(size = 12)
-    )
+    legend.position = 'top',
+    axis.title.x = element_text(hjust = 0.5),
+    strip.text.x = element_text(hjust = 0.5),
+    strip.text = element_text(size = 9)
+    ) +
+  labs(
+    y = 'Location', 
+    x = 'Effect size'
+  )
 
 # pout
-jpeg(here('figs/fieldcomp.jpeg'), height = 4, width = 5, family = 'serif', units = 'in', res = 500)
+jpeg(here('figs/fieldcomp.jpeg'), height = 4, width = 6.5, family = 'serif', units = 'in', res = 500)
 print(p)
 dev.off()
+```
 
+```{r, out.width = '60%'}
 knitr::include_graphics(here('figs/fieldcomp.jpeg'))
+```
+
+## Disolution 
+
+```{r, message = F, results = 'hide'}
+jpeg(here('figs/fieldolydiss.jpeg'), height = 5, width = 7.5, family = 'serif', units = 'in', res = 500)
+print(dissmod$plomod[[1]])
+dev.off()
+
+jpeg(here('figs/fieldpacdiss.jpeg'), height = 5, width = 7.5, family = 'serif', units = 'in', res = 500)
+print(dissmod$plomod[[2]])
+dev.off()
+```
+
+```{r, out.width = '60%'}
+knitr::include_graphics(here('figs/fieldpacdiss.jpeg'))
+knitr::include_graphics(here('figs/fieldolydiss.jpeg'))
 ```
 
