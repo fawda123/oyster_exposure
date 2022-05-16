@@ -83,7 +83,55 @@ datprc$ltmod[[4]]
 plofun(datprc$phmod[[4]])
 ```
 
-```{r}
+Alternative plots, these show the post-hoc comparisons of the locations from an ANOVA of treatment x location, see the above plots for all comparisons:
 
+```{r, fig.height = 4, fig.width = 5, out.width = '60%', message = F}
+# Olympia
+toplo <- datprc %>% 
+  mutate(
+    phmod = purrr::map(phmod, function(x){
+      x$`Exposure:Station` %>% 
+        data.frame %>% 
+        mutate(
+          comp = row.names(.)
+        )
+    })
+  ) %>% 
+  select(Organism, var, phmod) %>% 
+  unnest('phmod') %>% 
+  filter(comp %in% c('Post:OUT-Pre:OUT', 'Post:MID-Pre:MID', 'Post:EDG-Pre:EDG')) %>% 
+  mutate(
+    comp = factor(comp, 
+      levels = c('Post:OUT-Pre:OUT', 'Post:EDG-Pre:EDG', 'Post:MID-Pre:MID'), 
+      labels = c('Out', 'Edge', 'Mid')
+    ), 
+    pcol = ifelse(p.adj <= 0.05, 'p < 0.05', 'ns'), 
+    var = factor(var, levels = c('Length_mm', 'Weight'), labels = c('Delta~Length (mm)', 'Delta~Weight (g)')), 
+    Organism = factor(Organism, levels = c('Olympia', 'Pacific'))
+  ) 
+
+p <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) + 
+  geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
+  geom_point(position = position_dodge(width = 0.3), size = 3) + 
+  geom_errorbar(aes(xmin = lwr, xmax = upr), position = position_dodge(width = 0.3), width = 0.2) + 
+  facet_wrap(~var, scales = 'free_x', ncol = 2, strip.position = 'bottom', labeller = label_parsed) + 
+  scale_linetype_manual(values = c('dashed', 'solid')) +
+  theme_bw() + 
+  theme(
+    strip.placement = 'outside', 
+    panel.grid.minor = element_blank(), 
+    strip.background = element_blank(), 
+    axis.title = element_blank(), 
+    legend.title = element_blank(), 
+    legend.position = 'top', 
+    strip.text = element_text(size = 12)
+    )
+
+# pout
+jpeg(here('figs/fieldcomp.jpeg'), height = 4, width = 5, family = 'serif', units = 'in', res = 500)
+print(p)
+dev.off()
+
+knitr::include_graphics(here('figs/fieldcomp.jpeg'))
 ```
 
