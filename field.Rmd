@@ -188,7 +188,6 @@ plofun(sizmod$phmod[[4]])
 ```
 
 Alternative plots, these show the post-hoc comparisons of the locations from an ANOVA of treatment x location, see the above plots for all comparisons:
-
 ```{r, message = F, results = 'hide'}
 # Olympia
 toplo <- sizmod %>% 
@@ -301,6 +300,86 @@ knitr::include_graphics(here('figs/fieldcomp.jpeg'))
 
 ```{r, out.width = '60%'}
 knitr::include_graphics(here('figs/fieldcomp2.jpeg'))
+```
+
+```{r, message = F, results = 'hide'}
+# size, species models
+sizsppmod <- sizdat %>%
+  mutate(
+    Station = case_when(
+      Station %in% c('EDG', 'OUT') ~ 'Edge/Out', 
+      T ~ 'Mid'
+    )
+  ) %>% 
+  group_by(var) %>% 
+  nest() %>% 
+  mutate(
+    lmmod = map(data, ~aov(val ~ Exposure * Station * Organism, data = .x)),
+    phmod = map(lmmod, TukeyHSD),
+    ltmod = map(phmod, function(x){
+      modhsd <- x %>%
+        .$`Exposure:Station:Organism` %>%
+        data.frame
+      pvals <- modhsd$p.adj
+      names(pvals) <- rownames(modhsd)
+      lets <- multcompLetters(pvals)
+
+      return(lets)
+
+    })
+  )
+
+toplo <- sizsppmod %>% 
+  mutate(
+    phmod = purrr::map(phmod, function(x){
+      x$`Exposure:Station:Organism` %>% 
+        data.frame %>% 
+        mutate(
+          comp = row.names(.)
+        )
+    })
+  ) %>% 
+  select(var, phmod) %>% 
+  unnest('phmod') %>% 
+  mutate(
+    pcol = ifelse(p.adj <= 0.05, 'p < 0.05', 'ns'), 
+    pcol = factor(pcol, levels = c('p < 0.05', 'ns')),
+    var = factor(var, levels = c('Length_mm', 'Weight'), labels = c('Delta~Length (mm)', 'Delta~Weight (g)')), 
+  ) 
+
+p <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol)) + 
+  geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
+  geom_point(size = 3) + 
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) + 
+  facet_wrap(~var, scales = 'free_x', ncol = 2, strip.position = 'bottom', labeller = label_parsed) + 
+  scale_linetype_manual(values = c('solid', 'dashed'), drop = F) +
+  theme_ipsum() + 
+  theme(
+    strip.placement = 'outside',
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    strip.background = element_blank(), 
+    axis.title.y = element_blank(), 
+    legend.title = element_blank(), 
+    legend.position = 'top',
+    axis.title.x = element_text(hjust = 0.5),
+    strip.text.x = element_text(hjust = 0.5),
+    strip.text = element_text(size = 9), 
+    panel.background = element_rect()
+  ) +
+  labs(
+    y = 'Location', 
+    x = 'Effect size'
+  )
+
+# pout
+jpeg(here('figs/fieldcomp3.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
+print(p)
+dev.off()
+```
+
+```{r, out.width = '70%'}
+knitr::include_graphics(here('figs/fieldcomp3.jpeg'))
 ```
 
 ## Disolution 
