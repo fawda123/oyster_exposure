@@ -311,7 +311,10 @@ sizsppmod <- sizdat %>%
       T ~ 'Mid'
     )
   ) %>% 
-  group_by(var) %>% 
+  group_by(Organism, var) %>% 
+  mutate(val2 = as.numeric(scale(val))) %>% 
+  pivot_longer(cols = val:val2, names_to = 'scl', values_to = 'val') %>% 
+  group_by(var, scl) %>% 
   nest() %>% 
   mutate(
     lmmod = map(data, ~aov(val ~ Exposure * Station * Organism, data = .x)),
@@ -339,21 +342,14 @@ toplo <- sizsppmod %>%
         )
     })
   ) %>% 
-  select(var, phmod) %>% 
+  select(var, scl, phmod) %>% 
   unnest('phmod') %>% 
   mutate(
     pcol = ifelse(p.adj <= 0.05, 'p < 0.05', 'ns'), 
-    pcol = factor(pcol, levels = c('p < 0.05', 'ns')),
-    var = factor(var, levels = c('Length_mm', 'Weight'), labels = c('Delta~Length (mm)', 'Delta~Weight (g)')), 
-  ) 
+    pcol = factor(pcol, levels = c('p < 0.05', 'ns'))
+  )
 
-p <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol)) + 
-  geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
-  geom_point(size = 3) + 
-  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) + 
-  facet_wrap(~var, scales = 'free_x', ncol = 2, strip.position = 'bottom', labeller = label_parsed) + 
-  scale_linetype_manual(values = c('solid', 'dashed'), drop = F) +
-  theme_ipsum() + 
+thm <- theme_ipsum() + 
   theme(
     strip.placement = 'outside',
     panel.grid.minor = element_blank(),
@@ -366,7 +362,39 @@ p <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol)) +
     strip.text.x = element_text(hjust = 0.5),
     strip.text = element_text(size = 9), 
     panel.background = element_rect()
-  ) +
+  )
+
+toplo1 <- toplo %>% 
+  filter(scl == 'val') %>% 
+  mutate(
+    var = factor(var, levels = c('Length_mm', 'Weight'), labels = c('Delta~Length (mm)', 'Delta~Weight (g)'))
+  )
+
+p1 <- ggplot(toplo1, aes(y = comp, x = diff, linetype = pcol)) + 
+  geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
+  geom_point(size = 3) + 
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) + 
+  facet_wrap(~var, scales = 'free_x', ncol = 2, strip.position = 'bottom', labeller = label_parsed) + 
+  scale_linetype_manual(values = c('solid', 'dashed'), drop = F) +
+  thm +
+  labs(
+    y = 'Location', 
+    x = 'Effect size'
+  )
+
+toplo2 <- toplo %>% 
+  filter(scl == 'val2') %>% 
+  mutate(
+    var = factor(var, levels = c('Length_mm', 'Weight'), labels = c('Delta~Length (scaled)', 'Delta~Weight (scaled)')),
+  )
+
+p2 <- ggplot(toplo2, aes(y = comp, x = diff, linetype = pcol)) + 
+  geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
+  geom_point(size = 3) + 
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) + 
+  facet_wrap(~var, scales = 'free_x', ncol = 2, strip.position = 'bottom', labeller = label_parsed) + 
+  scale_linetype_manual(values = c('solid', 'dashed'), drop = F) +
+  thm +
   labs(
     y = 'Location', 
     x = 'Effect size'
@@ -374,12 +402,84 @@ p <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol)) +
 
 # pout
 jpeg(here('figs/fieldcomp3.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
-print(p)
+print(p1)
+dev.off()
+
+# pout
+jpeg(here('figs/fieldcomp4.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
+print(p2)
 dev.off()
 ```
 
 ```{r, out.width = '70%'}
 knitr::include_graphics(here('figs/fieldcomp3.jpeg'))
+```
+
+```{r, out.width = '70%'}
+knitr::include_graphics(here('figs/fieldcomp4.jpeg'))
+```
+
+```{r, message = F, warning = F, results = 'hide'}
+
+sclex <- sizsppmod %>% 
+  select(-lmmod, -phmod, -ltmod) %>% 
+  unnest('data') %>% 
+  mutate(
+    var1 = factor(var, levels = c('Length_mm', 'Weight'), labels = c('Length (mm)', 'Weight (g)')),
+    var2 = factor(var, levels = c('Length_mm', 'Weight'), labels = c('Length (scaled)', 'Weight (scaled)'))
+  ) 
+
+thm <- theme_ipsum() + 
+  theme(
+    strip.placement = 'outside',
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    strip.background = element_blank(), 
+    legend.title = element_blank(), 
+    legend.position = 'top',
+    axis.title.x = element_text(hjust = 0.5),
+    axis.title.y = element_text(hjust = 0.5, size = 12),
+    strip.text.x = element_text(hjust = 0.5),
+    strip.text.y = element_text(hjust = 0.5),
+    panel.spacing = unit(0.5, 'lines')
+  )
+
+toplo1 <- sclex %>% 
+  filter(scl == 'val')
+
+p1 <- ggplot(toplo1, aes(x = val, fill = Organism)) +
+  geom_density(alpha = 0.7) + 
+  facet_grid(Exposure ~ var1, switch = 'x', scales = 'free_x') + 
+  thm + 
+  labs(
+    x = NULL, 
+    y = 'Density', 
+    subtitle = 'Measured values'
+  )
+
+toplo2 <- sclex %>% 
+  filter(scl == 'val2')
+
+p2 <- ggplot(toplo2, aes(x = val, fill = Organism)) +
+  geom_density(alpha = 0.7) + 
+  facet_grid(Exposure ~ var2, switch = 'x', scales = 'free_x') + 
+  thm + 
+  labs(
+    x = NULL, 
+    y = 'Density', 
+    subtitle = 'Scaled values'
+  )
+
+p <- p1 + p2 + plot_layout(guides = 'collect') & theme(legend.position = 'bottom')
+
+# pout
+jpeg(here('figs/fieldcomp5.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
+print(p)
+dev.off()
+```
+
+```{r, out.width = '70%'}
+knitr::include_graphics(here('figs/fieldcomp5.jpeg'))
 ```
 
 ## Disolution 
