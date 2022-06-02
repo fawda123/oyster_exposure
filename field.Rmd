@@ -400,6 +400,26 @@ p2 <- ggplot(toplo2, aes(y = comp, x = diff, linetype = pcol)) +
     x = 'Effect size'
   )
 
+# filter scaled post-hoc comparisons to those that are relevant
+toplo3 <- toplo2 %>% 
+  filter(comp %in% c("Pre:Mid:Pacific-Pre:Mid:Olympia", "Pre:Mid:Pacific-Post:Edge/Out:Pacific", 
+                     "Post:Mid:Pacific-Pre:Mid:Pacific", "Post:Mid:Pacific-Pre:Edge/Out:Pacific", 
+                     "Post:Mid:Pacific-Post:Mid:Olympia", "Post:Mid:Pacific-Post:Edge/Out:Olympia", 
+                     "Post:Edge/Out:Pacific-Post:Mid:Olympia", "Post:Edge/Out:Pacific-Post:Edge/Out:Olympia")
+           )
+
+p3 <- ggplot(toplo3, aes(y = comp, x = diff, linetype = pcol)) + 
+  geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
+  geom_point(size = 3) + 
+  geom_errorbar(aes(xmin = lwr, xmax = upr), width = 0.2) + 
+  facet_wrap(~var, scales = 'free_x', ncol = 2, strip.position = 'bottom', labeller = label_parsed) + 
+  scale_linetype_manual(values = c('solid', 'dashed'), drop = F) +
+  thm +
+  labs(
+    y = 'Location', 
+    x = 'Effect size'
+  )
+
 # pout
 jpeg(here('figs/fieldcomp3.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
 print(p1)
@@ -409,6 +429,11 @@ dev.off()
 jpeg(here('figs/fieldcomp4.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
 print(p2)
 dev.off()
+
+# pout
+jpeg(here('figs/fieldcomp5.jpeg'), height = 5, width = 8.5, family = 'serif', units = 'in', res = 500)
+print(p3)
+dev.off()
 ```
 
 ```{r, out.width = '70%'}
@@ -417,6 +442,10 @@ knitr::include_graphics(here('figs/fieldcomp3.jpeg'))
 
 ```{r, out.width = '70%'}
 knitr::include_graphics(here('figs/fieldcomp4.jpeg'))
+```
+
+```{r, out.width = '70%'}
+knitr::include_graphics(here('figs/fieldcomp5.jpeg'))
 ```
 
 ```{r, message = F, warning = F, results = 'hide'}
@@ -473,13 +502,13 @@ p2 <- ggplot(toplo2, aes(x = val, fill = Organism)) +
 p <- p1 + p2 + plot_layout(guides = 'collect') & theme(legend.position = 'bottom')
 
 # pout
-jpeg(here('figs/fieldcomp5.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
+jpeg(here('figs/fieldcomp6.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
 print(p)
 dev.off()
 ```
 
 ```{r, out.width = '70%'}
-knitr::include_graphics(here('figs/fieldcomp5.jpeg'))
+knitr::include_graphics(here('figs/fieldcomp6.jpeg'))
 ```
 
 ## Disolution 
