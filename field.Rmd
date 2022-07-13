@@ -214,13 +214,13 @@ toplo <- sizmod %>%
     Organism = factor(Organism, levels = c('Olympia', 'Pacific'))
   ) 
 
-p <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) + 
+p1 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) + 
   geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
   geom_point(position = position_dodge(width = 0.3), size = 3) + 
   geom_errorbar(aes(xmin = lwr, xmax = upr), position = position_dodge(width = 0.3), width = 0.2) + 
   facet_wrap(~var, scales = 'free_x', ncol = 2, strip.position = 'bottom', labeller = label_parsed) + 
   scale_linetype_manual(values = c('solid', 'dashed'), drop = F) +
-  theme_ipsum() + 
+  theme_ipsum(plot_margin = margin(5, 5, 5, 5)) + 
   theme(
     strip.placement = 'outside',
     panel.grid.minor = element_blank(),
@@ -235,13 +235,9 @@ p <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) +
     ) +
   labs(
     y = 'Location', 
-    x = 'Effect size'
+    x = 'Effect size', 
+    subtitle = '(a) Estimated means'
   )
-
-# pout
-jpeg(here('figs/fieldcomp.jpeg'), height = 4, width = 6.5, family = 'serif', units = 'in', res = 500)
-print(p)
-dev.off()
 
 # Olympia
 toplo <- sizmod %>% 
@@ -263,13 +259,13 @@ toplo <- sizmod %>%
     Organism = factor(Organism, levels = c('Olympia', 'Pacific'))
   ) 
 
-p <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) + 
+p2 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) + 
   geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
   geom_point(position = position_dodge(width = 0.3), size = 3) + 
   geom_errorbar(aes(xmin = lwr, xmax = upr), position = position_dodge(width = 0.3), width = 0.2) + 
   facet_wrap(~var, scales = 'free_x', ncol = 2, strip.position = 'bottom', labeller = label_parsed) + 
   scale_linetype_manual(values = c('solid', 'dashed'), drop = F) +
-  theme_ipsum() + 
+  theme_ipsum(plot_margin = margin(5, 5, 5, 5)) + 
   theme(
     strip.placement = 'outside',
     panel.grid.minor = element_blank(),
@@ -285,21 +281,20 @@ p <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) +
     ) +
   labs(
     y = 'Location', 
-    x = 'Effect size'
+    x = 'Effect size', 
+    subtitle = '(b) Multiple-comparison plots'
   )
 
+p <- p1 + p2 + plot_layout(ncol = 1, heights = c(0.8, 1))
+
 # pout
-jpeg(here('figs/fieldcomp2.jpeg'), height = 6, width = 6.5, family = 'serif', units = 'in', res = 500)
+jpeg(here('figs/fieldcomp.jpeg'), height = 8, width = 7, family = 'serif', units = 'in', res = 500)
 print(p)
 dev.off()
 ```
 
 ```{r, out.width = '60%'}
 knitr::include_graphics(here('figs/fieldcomp.jpeg'))
-```
-
-```{r, out.width = '60%'}
-knitr::include_graphics(here('figs/fieldcomp2.jpeg'))
 ```
 
 ```{r, message = F, results = 'hide'}
@@ -421,19 +416,23 @@ p3 <- ggplot(toplo3, aes(y = comp, x = diff, linetype = pcol)) +
   )
 
 # pout
-jpeg(here('figs/fieldcomp3.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
+jpeg(here('figs/fieldcomp2.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
 print(p1)
 dev.off()
 
 # pout
-jpeg(here('figs/fieldcomp4.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
+jpeg(here('figs/fieldcomp3.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
 print(p2)
 dev.off()
 
 # pout
-jpeg(here('figs/fieldcomp5.jpeg'), height = 5, width = 8.5, family = 'serif', units = 'in', res = 500)
+jpeg(here('figs/fieldcomp4.jpeg'), height = 5, width = 8.5, family = 'serif', units = 'in', res = 500)
 print(p3)
 dev.off()
+```
+
+```{r, out.width = '70%'}
+knitr::include_graphics(here('figs/fieldcomp2.jpeg'))
 ```
 
 ```{r, out.width = '70%'}
@@ -442,10 +441,6 @@ knitr::include_graphics(here('figs/fieldcomp3.jpeg'))
 
 ```{r, out.width = '70%'}
 knitr::include_graphics(here('figs/fieldcomp4.jpeg'))
-```
-
-```{r, out.width = '70%'}
-knitr::include_graphics(here('figs/fieldcomp5.jpeg'))
 ```
 
 ```{r, message = F, warning = F, results = 'hide'}
@@ -502,13 +497,13 @@ p2 <- ggplot(toplo2, aes(x = val, fill = Organism)) +
 p <- p1 + p2 + plot_layout(guides = 'collect') & theme(legend.position = 'bottom')
 
 # pout
-jpeg(here('figs/fieldcomp6.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
+jpeg(here('figs/fieldcomp5.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
 print(p)
 dev.off()
 ```
 
 ```{r, out.width = '70%'}
-knitr::include_graphics(here('figs/fieldcomp6.jpeg'))
+knitr::include_graphics(here('figs/fieldcomp5.jpeg'))
 ```
 
 ## Disolution 
