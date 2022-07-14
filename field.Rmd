@@ -231,7 +231,8 @@ p1 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) +
     legend.position = 'top',
     axis.title.x = element_text(hjust = 0.5),
     strip.text.x = element_text(hjust = 0.5),
-    strip.text = element_text(size = 9)
+    strip.text = element_text(size = 9),
+    panel.background = element_rect()
     ) +
   labs(
     y = 'Location', 
@@ -282,7 +283,7 @@ p2 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) +
   labs(
     y = 'Location', 
     x = 'Effect size', 
-    subtitle = '(b) Multiple-comparison plots'
+    subtitle = '(b) Multiple comparisons'
   )
 
 p <- p1 + p2 + plot_layout(ncol = 1, heights = c(0.8, 1))
