@@ -495,19 +495,23 @@ p2 <- ggplot(toplo2, aes(x = val, fill = Organism)) +
     subtitle = 'Scaled values'
   )
 
-p <- p1 + p2 + plot_layout(guides = 'collect') & theme(legend.position = 'bottom')
-
 # pout
 jpeg(here('figs/fieldcomp5.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
-print(p)
+print(p1)
 dev.off()
+
+jpeg(here('figs/fieldcomp6.jpeg'), height = 7, width = 8.5, family = 'serif', units = 'in', res = 500)
+print(p2)
+dev.off()
+
 ```
 
 ```{r, out.width = '70%'}
 knitr::include_graphics(here('figs/fieldcomp5.jpeg'))
+knitr::include_graphics(here('figs/fieldcomp6.jpeg'))
 ```
 
-## Disolution 
+## Dissolution 
 
 ```{r, message = F, results = 'hide'}
 jpeg(here('figs/fieldolydiss.jpeg'), height = 5, width = 7.5, family = 'serif', units = 'in', res = 500)
@@ -521,6 +525,10 @@ dev.off()
 
 ```{r, out.width = '60%'}
 knitr::include_graphics(here('figs/fieldpacdiss.jpeg'))
-knitr::include_graphics(here('figs/fieldolydiss.jpeg'))
+dissmod %>% filter(Organism == 'Pacific') %>% pull(anomod) %>% .[[1]]
 ```
 
+```{r, out.width = '60%'}
+knitr::include_graphics(here('figs/fieldolydiss.jpeg'))
+dissmod %>% filter(Organism == 'Olympia') %>% pull(anomod) %>% .[[1]]
+```
