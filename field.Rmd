@@ -10,13 +10,15 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
-library(sjPlot)
+# library(sjPlot)
 library(multcompView)
 library(modelbased)
 library(hrbrthemes)
 library(patchwork)
 library(here)
 library(readxl)
+library(lmerTest)
+library(blme)
 
 # oyster length/weight data
 sizdat <- read.csv(here('data/raw', 'field_data.csv'), stringsAsFactors = F) %>% 
@@ -47,7 +49,12 @@ dissdat2 <- read_excel(here('data/raw/Kelp Forest SEM ScoringNB.xlsx')) %>%
   rename(`Average.Score` = `Avg Score`) %>% 
   filter(!is.na(`Average.Score`))
 
-dissdat <- bind_rows(dissdat1, dissdat2)  
+# combine the two files
+# make a unique replicate columns for two replicates at each location/species
+dissdat <- bind_rows(dissdat1, dissdat2) %>% 
+  unite('newgrp', Exposure, Group, remove = F) %>% 
+  mutate(newgrp = factor(newgrp, labels = 1:length(unique(newgrp)))) %>% 
+  select(-Rep)
 
 # size models
 sizmod <- sizdat %>%
@@ -75,7 +82,7 @@ sizmod <- sizdat %>%
     }),
     plors = pmap(list(Organism, var, lmmod), function(Organism, var, lmmod){
       
-      plot_model(lmmod, type = 'int', mdrt.values = 'meansd') + ggtitle(paste(Organism, var, sep = ', '))
+      sjPlot::plot_model(lmmod, type = 'int', mdrt.values = 'meansd') + ggtitle(paste(Organism, var, sep = ', '))
       
     })
   )
@@ -87,7 +94,24 @@ dissmod <- dissdat %>%
   mutate(
     lmmod = pmap(list(data), function(data){
 
-      out <- lm(Average.Score ~ Exposure, data = data)
+      # out <- lm(Average.Score ~ Exposure, data = data)
+      tomod <- data %>% 
+        mutate(
+          newgrp = fct_drop(newgrp),
+          newgrp = as.numeric(newgrp)
+        )# %>% 
+        # mutate(
+        #   newgrp = newgrp - min(newgrp) + 1, 
+        #   .by = 'Exposure'
+        # ) %>% 
+        # mutate(
+        #   newgrp = as.character(newgrp)
+        # ) %>% 
+        # filter(newgrp != '3')
+
+      # out <- blmer(Average.Score ~ Exposure + (1|newgrp:Exposure), data = tomod)
+      out <- lmer(Average.Score ~ Exposure + (1|newgrp), data = tomod, REML = F) # this is the same as above if all newgrp were unique
+      # out <- lmer(Average.Score ~ Exposure + (1|Group:Exposure), data = tomod, REML = F) # this is also equivalent
       
       return(out)
       
@@ -103,15 +127,16 @@ dissmod <- dissdat %>%
 
       # estimates
       mnsval <- estimate_means(lmmod, 'Exposure')
-      cnsval <- estimate_contrasts(lmmod, 'Exposure') %>% 
+      cnsval <- estimate_contrasts(lmmod, 'Exposure') %>%
         mutate(
           sig = ifelse(p < 0.05, 'sig', 'notsig'),
           sig = factor(sig,levels = c('notsig', 'sig'), labels = c(' not significant', 'significant'))
-        ) %>% 
+        ) %>%
         unite('Contrast', Level1, Level2, sep = '-')
 
       # sample size
-      n <- lmmod$model %>% nrow
+      # n <- lmmod$model %>% nrow
+      n <- lmmod@frame %>% nrow
       
       # labels
       subttl <- paste0(Organism, ' oyster')
@@ -120,7 +145,7 @@ dissmod <- dissdat %>%
       # mean esimate plots
       p1 <- ggplot(mnsval, aes(x = Exposure, y = Mean)) + 
         geom_point(size = 3) + 
-        geom_errorbar(aes(ymin = CI_low, ymax = CI_high), colour = 'black', size = 1) + 
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high), colour = 'black', linewidth = 1) + 
         labs(x = NULL, y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl) + 
         theme_ipsum() + 
         theme(
@@ -130,24 +155,23 @@ dissmod <- dissdat %>%
         coord_flip()
       
       # contrast plots
-      p2 <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) + 
-        geom_point(aes(colour = sig), size = 3) + 
-        geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = sig), size = 1) + 
+      p2 <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) +
+        geom_point(aes(colour = sig), size = 3) +
+        geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = sig), linewidth = 1) +
         labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', title = 'Treatment differences', subtitle = subttl,
              caption = captns) +
-        theme_ipsum() + 
+        theme_ipsum() +
         theme(
-          legend.title = element_blank(), 
-          legend.position = 'bottom', 
+          legend.title = element_blank(),
+          legend.position = 'bottom',
           panel.grid.major.y = element_blank(),
           panel.grid.minor.y = element_blank()
         ) +
-        geom_hline(yintercept = 0, linetype = 'dotted', size = 1) + 
-        scale_colour_manual(drop = F, values = c('black', 'tomato1')) + 
+        geom_hline(yintercept = 0, linetype = 'dotted', size = 1) +
+        scale_colour_manual(drop = F, values = c('black', 'tomato1')) +
         coord_flip()
-      
-      p1 + p2 + plot_layout(ncol  = 2)   
-      
+
+      p1 + p2 + plot_layout(ncol  = 2)
       
     })
   )
