@@ -133,13 +133,25 @@ dissmod <- dissdat %>%
       
       # labels
       subttl <- paste0(Organism, ' oyster')
+      
+      ttl1 <- NULL
+      ttl2 <- NULL
+      ylab1 <- 'Estimated means (+/- 95% CI)'
+      ylab2 <- 'Estimated differences (+/- 95% CI)'
       captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      if(Organism == 'Pacific'){
+        ttl1 <- '(a) Treatment estimates'
+        ttl2 <- '(b) Treatment differences'
+        captns <- NULL
+        # ylab1 <- NULL
+        # ylab2 <- NULL
+      }
       
       # mean esimate plots
       p1 <- ggplot(mnsval, aes(x = Exposure, y = Mean)) + 
         geom_point(size = 3) + 
         geom_errorbar(aes(ymin = CI_low, ymax = CI_high), colour = 'black', linewidth = 1) + 
-        labs(x = NULL, y = 'Estimated means (+/- 95% CI)', title = 'Treatment estimates', subtitle = subttl) + 
+        labs(x = NULL, y = ylab1, title =  ttl1, subtitle = subttl) + 
         theme_ipsum() + 
         theme(
           panel.grid.major.y = element_blank(),
@@ -151,7 +163,7 @@ dissmod <- dissdat %>%
       p2 <- ggplot(cnsval, aes(x = Contrast, y = Difference, colour = sig)) +
         geom_point(aes(colour = sig), size = 3) +
         geom_errorbar(aes(ymin = CI_low, ymax = CI_high, colour = sig), linewidth = 1) +
-        labs(x = NULL, y = 'Estimated differences (+/- 95% CI)', title = 'Treatment differences', subtitle = subttl,
+        labs(x = NULL, y = ylab2, title = ttl2, subtitle = subttl,
              caption = captns) +
         theme_ipsum() +
         theme(
@@ -164,7 +176,7 @@ dissmod <- dissdat %>%
         scale_colour_manual(drop = F, values = c('black', 'tomato1')) +
         coord_flip()
 
-      p1 + p2 + plot_layout(ncol  = 2)
+      list(p1, p2)
       
     })
   )
@@ -531,21 +543,32 @@ knitr::include_graphics(here('figs/fieldcomp6.jpeg'))
 ## Dissolution 
 
 ```{r, message = F, results = 'hide'}
-jpeg(here('figs/fieldolydiss.jpeg'), height = 5, width = 7.5, family = 'serif', units = 'in', res = 500)
-print(dissmod$plomod[[1]])
-dev.off()
 
-jpeg(here('figs/fieldpacdiss.jpeg'), height = 5, width = 7.5, family = 'serif', units = 'in', res = 500)
-print(dissmod$plomod[[2]])
+p1 <- dissmod$plomod[[1]]
+p2 <- dissmod$plomod[[2]]
+p <- p2[[1]] + p2[[2]] + p1[[1]] + p1[[2]] + plot_layout(ncol = 2, guides = 'collect') & 
+  theme(
+    legend.position = 'bottom',
+    plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), 'in')
+    )
+
+jpeg(here('figs/fielddiss.jpeg'), height = 7, width = 7, family = 'serif', units = 'in', res = 500)
+print(p)
 dev.off()
 ```
 
-```{r, out.width = '60%'}
-knitr::include_graphics(here('figs/fieldpacdiss.jpeg'))
+```{r, out.width='70%'}
+knitr::include_graphics(here('figs/fielddiss.jpeg'))
+```
+
+Pacific ANOVA:
+
+```{r}
 dissmod %>% filter(Organism == 'Pacific') %>% pull(anomod) %>% .[[1]]
 ```
 
-```{r, out.width = '60%'}
-knitr::include_graphics(here('figs/fieldolydiss.jpeg'))
+Olympia ANOVA: 
+
+```{r}
 dissmod %>% filter(Organism == 'Olympia') %>% pull(anomod) %>% .[[1]]
 ```
