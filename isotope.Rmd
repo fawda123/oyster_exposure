@@ -1,0 +1,120 @@
+---
+title: "Puget Sound isotope analysis"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide 
+---
+
+```{r setup, warning=FALSE, message=FALSE, echo = T}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+
+library(simmr)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(here)
+library(janitor)
+
+isodat <- read_excel(here('data/raw/Bednarsek PugetSoundKelpForest 0719.xls'), sheet = 'Samples') %>% 
+  clean_names() %>% 
+  select(
+    sample = sample_id, 
+    d13C = d13cvpdb, 
+    d15N = d15n_air
+  )
+
+# plot data
+
+mixdat <- isodat %>% 
+  filter(!grepl('^Puget', sample)) %>% 
+  mutate(
+    sample = gsub('\\d\\-.*$', '', sample), 
+    sample = factor(sample, 
+                    levels = c('MID-P', 'EDG-P', 'OUT-P', 'MID-O', 'EDG-O', 'OUT-O'),
+                    labels = c('Mid P', 'Edg P', 'Out P', 'Mid O', 'Edg O', 'Out O')
+    ),
+    Exposure = gsub('\\s.$', '', sample),
+    Exposure = factor(Exposure, levels = c('Mid', 'Edg', 'Out')),
+    Organism = gsub('^.*\\s', '', sample),
+    Organism = factor(Organism, levels = c('P', 'O'), labels = c('Pacific', 'Olympia'))
+  )
+
+srcdat <- isodat %>% 
+  filter(grepl('^Puget', sample)) %>% 
+  pivot_longer(cols = c(d13C, d15N)) %>% 
+  summarise(
+    ave = mean(value), 
+    std = sd(value), 
+    .by = 'name'
+  ) %>% 
+  pivot_longer(cols = c(ave, std), names_to = 'met') %>% 
+  unite(col = 'met', name, met) %>% 
+  pivot_wider(names_from = 'met', values_from = 'value')
+
+# sim data
+mix <- mixdat %>% 
+  select(d13C, d15N) %>% 
+  as.matrix()
+
+grp <- mixdat$sample
+
+s_means <- isodat %>% 
+  filter(grepl('^Puget', sample)) %>% 
+  select(-sample) %>% 
+  colMeans() %>% 
+  as.numeric() %>% 
+  matrix(ncol = 2, nrow = 1)
+
+s_sd <- isodat %>% 
+  filter(grepl('^Puget', sample)) %>% 
+  select(-sample) %>% 
+  summarise_all(sd) %>%
+  as.numeric() %>% 
+  matrix(ncol = 2, nrow = 1)
+
+s_names <- 'Kelp'
+
+simdat <- simmr_load(
+  mixtures = mix, 
+  source_names = s_names, 
+  source_means = s_means, 
+  source_sds = s_sd, 
+  group = grp
+)
+```
+
+## Length and weight
+
+```{r, results = 'hide'}
+expcols <- RColorBrewexpcols <- RColorBrewexpcols <- RColorBrewer::brewer.pal(9, 'Blues')[c(2, 5, 8)]
+p <- ggplot() + 
+  geom_point(data = mixdat, aes(x = d13C, y = d15N, fill = Exposure, shape = Organism), size = 5) +
+  geom_point(data = srcdat, aes(x = d13C_ave, y = d15N_ave, color = 'Kelp'), size = 5) +
+  geom_segment(data = srcdat, aes(x = d13C_ave - d13C_std, y = d15N_ave, xend = d13C_ave + d13C_std, yend = d15N_ave, color = 'Kelp'), show.legend = F) +
+  geom_segment(data = srcdat, aes(y = d15N_ave - d15N_std, x = d13C_ave, yend = d15N_ave + d15N_std, xend = d13C_ave, color = 'Kelp'), show.legend = F) +
+  scale_fill_manual(values = expcols) + 
+  scale_shape_manual(values = c(21, 24)) + 
+  guides(
+    fill = guide_legend(override.aes = list(color = expcols, shape = 15, size = 10))
+    ) + 
+  ylab(expression(paste(delta^{15}, "N (\u2030)"))) +
+  xlab(expression(paste(delta^{13}, "C (\u2030)"))) + 
+  theme_bw() + 
+  theme(
+    text = element_text(size=20)
+    ) +  
+  labs(
+    colour= NULL
+  )
+
+# pout
+jpeg(here('figs/isotope.jpeg'), height = 6, width = 7, family = 'serif', units = 'in', res = 500)
+print(p)
+dev.off()
+```
+
+```{r, out.width = '70%'}
+knitr::include_graphics(here('figs/isotope.jpeg'))
+```
+

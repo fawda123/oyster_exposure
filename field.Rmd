@@ -138,7 +138,7 @@ dissmod <- dissdat %>%
       ttl2 <- NULL
       ylab1 <- 'Estimated means (+/- 95% CI)'
       ylab2 <- 'Estimated differences (+/- 95% CI)'
-      captns <- paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
+      captns <- NULL#paste0('Significance is where CI does not include zero, alpha = 0.05, total n = ', n)
       if(Organism == 'Pacific'){
         ttl1 <- '(a) Treatment estimates'
         ttl2 <- '(b) Treatment differences'

@@ -22,6 +22,8 @@ NERRS pH decomposition: <https://fawda123.github.io/oyster_exposure/phtrend.html
 
 Puget Sound field data: <https://fawda123.github.io/oyster_exposure/field.html>
 
+Puget Sound isotope data: <https://fawda123.github.io/oyster_exposure/isotope.html>
+
 Puget Sound modelled pH decomposition: <https://fawda123.github.io/oyster_exposure/modphtrend.html>
 
 Puget Sound observed pH decomposition: <https://fawda123.github.io/oyster_exposure/obsphtrend.html>
