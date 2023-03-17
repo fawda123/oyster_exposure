@@ -99,19 +99,12 @@ dissmod <- dissdat %>%
         mutate(
           newgrp = fct_drop(newgrp),
           newgrp = as.numeric(newgrp)
-        )# %>% 
-        # mutate(
-        #   newgrp = newgrp - min(newgrp) + 1, 
-        #   .by = 'Exposure'
-        # ) %>% 
-        # mutate(
-        #   newgrp = as.character(newgrp)
-        # ) %>% 
-        # filter(newgrp != '3')
-
+        )
+      
       # out <- blmer(Average.Score ~ Exposure + (1|newgrp:Exposure), data = tomod)
-      out <- lmer(Average.Score ~ Exposure + (1|newgrp), data = tomod, REML = F) # this is the same as above if all newgrp were unique
+      # out <- lmer(Average.Score ~ Exposure + (1|newgrp), data = tomod, REML = F) # this is the same as above if all newgrp were unique
       # out <- lmer(Average.Score ~ Exposure + (1|Group:Exposure), data = tomod, REML = F) # this is also equivalent
+      out <- lm(Average.Score ~ Exposure, data = tomod)
       
       return(out)
       
@@ -135,8 +128,8 @@ dissmod <- dissdat %>%
         unite('Contrast', Level1, Level2, sep = '-')
 
       # sample size
-      # n <- lmmod$model %>% nrow
-      n <- lmmod@frame %>% nrow
+      n <- lmmod$model %>% nrow
+      # n <- lmmod@frame %>% nrow
       
       # labels
       subttl <- paste0(Organism, ' oyster')
