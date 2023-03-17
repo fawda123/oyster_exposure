@@ -97,8 +97,6 @@ simdatorg <- simmr_load(
 
 ```
 
-## Length and weight
-
 ```{r, results = 'hide'}
 expcols <- RColorBrewexpcols <- RColorBrewexpcols <- RColorBrewer::brewer.pal(9, 'Blues')[c(2, 5, 8)]
 p <- ggplot() + 
