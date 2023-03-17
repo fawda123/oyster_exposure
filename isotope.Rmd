@@ -57,7 +57,8 @@ mix <- mixdat %>%
   select(d13C, d15N) %>% 
   as.matrix()
 
-grp <- mixdat$sample
+grpexp <- mixdat$Exposure
+grporg <- mixdat$Organism
 
 s_means <- isodat %>% 
   filter(grepl('^Puget', sample)) %>% 
@@ -65,9 +66,9 @@ s_means <- isodat %>%
   colMeans() %>% 
   as.numeric() %>% 
   matrix(ncol = 2, nrow = 1)
-
+ 
 s_sd <- isodat %>% 
-  filter(grepl('^Puget', sample)) %>% 
+  filter(grepl('^Puget', sample)) %>%
   select(-sample) %>% 
   summarise_all(sd) %>%
   as.numeric() %>% 
@@ -75,13 +76,25 @@ s_sd <- isodat %>%
 
 s_names <- 'Kelp'
 
-simdat <- simmr_load(
+simdatexp <- simmr_load(
   mixtures = mix, 
   source_names = s_names, 
   source_means = s_means, 
   source_sds = s_sd, 
-  group = grp
+  group = grpexp
 )
+
+simdatorg <- simmr_load(
+  mixtures = mix, 
+  source_names = s_names, 
+  source_means = s_means, 
+  source_sds = s_sd, 
+  group = grporg
+)
+
+# modexp <- simmr_mcmc(simdatexp)
+# modorg <- simmr_mcmc(simdatorg)
+
 ```
 
 ## Length and weight

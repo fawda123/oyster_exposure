@@ -493,7 +493,8 @@ mix &lt;- mixdat %&gt;%
   select(d13C, d15N) %&gt;% 
   as.matrix()
 
-grp &lt;- mixdat$sample
+grpexp &lt;- mixdat$Exposure
+grporg &lt;- mixdat$Organism
 
 s_means &lt;- isodat %&gt;% 
   filter(grepl(&#39;^Puget&#39;, sample)) %&gt;% 
@@ -501,9 +502,9 @@ s_means &lt;- isodat %&gt;%
   colMeans() %&gt;% 
   as.numeric() %&gt;% 
   matrix(ncol = 2, nrow = 1)
-
+ 
 s_sd &lt;- isodat %&gt;% 
-  filter(grepl(&#39;^Puget&#39;, sample)) %&gt;% 
+  filter(grepl(&#39;^Puget&#39;, sample)) %&gt;%
   select(-sample) %&gt;% 
   summarise_all(sd) %&gt;%
   as.numeric() %&gt;% 
@@ -511,13 +512,24 @@ s_sd &lt;- isodat %&gt;%
 
 s_names &lt;- &#39;Kelp&#39;
 
-simdat &lt;- simmr_load(
+simdatexp &lt;- simmr_load(
   mixtures = mix, 
   source_names = s_names, 
   source_means = s_means, 
   source_sds = s_sd, 
-  group = grp
-)</code></pre>
+  group = grpexp
+)
+
+simdatorg &lt;- simmr_load(
+  mixtures = mix, 
+  source_names = s_names, 
+  source_means = s_means, 
+  source_sds = s_sd, 
+  group = grporg
+)
+
+# modexp &lt;- simmr_mcmc(simdatexp)
+# modorg &lt;- simmr_mcmc(simdatorg)</code></pre>
 <div id="length-and-weight" class="section level2">
 <h2>Length and weight</h2>
 <pre class="r"><code>expcols &lt;- RColorBrewexpcols &lt;- RColorBrewexpcols &lt;- RColorBrewer::brewer.pal(9, &#39;Blues&#39;)[c(2, 5, 8)]
