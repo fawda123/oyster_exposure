@@ -567,8 +567,20 @@ Pacific ANOVA:
 dissmod %>% filter(Organism == 'Pacific') %>% pull(anomod) %>% .[[1]]
 ```
 
+Pacific contrasts:
+
+```{r, warning=F}
+dissmod %>% filter(Organism == 'Pacific') %>% pull(lmmod) %>% .[[1]] %>% estimate_contrasts('Exposure')
+```
+
 Olympia ANOVA: 
 
 ```{r}
 dissmod %>% filter(Organism == 'Olympia') %>% pull(anomod) %>% .[[1]]
+```
+
+Olympia contrasts:
+
+```{r, warning=F}
+dissmod %>% filter(Organism == 'Olympia') %>% pull(lmmod) %>% .[[1]] %>% estimate_contrasts('Exposure')
 ```
