@@ -7,7 +7,7 @@ output:
 ---
 
 ```{r setup, warning=FALSE, message=FALSE, echo = T}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
 
 library(tidyverse)
 # library(sjPlot)
@@ -234,8 +234,8 @@ toplo <- sizmod %>%
   filter(comp %in% c('Post:Edge/Out-Pre:Edge/Out', 'Post:Mid-Pre:Mid')) %>% 
   mutate(
     comp = factor(comp, 
-      levels = c('Post:Edge/Out-Pre:Edge/Out', 'Post:Mid-Pre:Mid'), 
-      labels = c('Out/Edge', 'Mid')
+                  levels = c('Post:Edge/Out-Pre:Edge/Out', 'Post:Mid-Pre:Mid'), 
+                  labels = c('Out/Edge', 'Mid')
     ), 
     pcol = ifelse(p.adj <= 0.05, 'p < 0.05', 'ns'), 
     pcol = factor(pcol, levels = c('p < 0.05', 'ns')),
@@ -243,12 +243,16 @@ toplo <- sizmod %>%
     Organism = factor(Organism, levels = c('Olympia', 'Pacific'))
   ) 
 
-p1 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) + 
+p1 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism, fill = Organism)) + 
   geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
-  geom_point(position = position_dodge(width = 0.3), size = 3) + 
+  geom_col(position = position_dodge(width = 0.3), alpha = 0.7, color = NA, width = 0.3) + 
   geom_errorbar(aes(xmin = lwr, xmax = upr), position = position_dodge(width = 0.3), width = 0.2) + 
   facet_wrap(~var, scales = 'free_x', ncol = 2, strip.position = 'bottom', labeller = label_parsed) + 
   scale_linetype_manual(values = c('solid', 'dashed'), drop = F) +
+  guides(
+    fill = guide_legend(override.aes = list(linetype = c(0, 0))), 
+    linetype = guide_legend(override.aes = list(fill = c(NA, NA)))
+  ) +
   theme_ipsum(plot_margin = margin(5, 5, 5, 5)) + 
   theme(
     strip.placement = 'outside',
@@ -262,7 +266,7 @@ p1 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) +
     strip.text.x = element_text(hjust = 0.5),
     strip.text = element_text(size = 9),
     panel.background = element_rect()
-    ) +
+  ) +
   labs(
     y = 'Location', 
     x = 'Effect size', 
@@ -289,9 +293,9 @@ toplo <- sizmod %>%
     Organism = factor(Organism, levels = c('Olympia', 'Pacific'))
   ) 
 
-p2 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) + 
+p2 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism, fill = Organism)) + 
   geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
-  geom_point(position = position_dodge(width = 0.3), size = 3) + 
+  geom_col(position = position_dodge(width = 0.3), color = NA, width = 0.3, alpha = 0.7) + 
   geom_errorbar(aes(xmin = lwr, xmax = upr), position = position_dodge(width = 0.3), width = 0.2) + 
   facet_wrap(~var, scales = 'free_x', ncol = 2, strip.position = 'bottom', labeller = label_parsed) + 
   scale_linetype_manual(values = c('solid', 'dashed'), drop = F) +
@@ -308,7 +312,11 @@ p2 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism)) +
     strip.text.x = element_text(hjust = 0.5),
     strip.text = element_text(size = 9), 
     panel.background = element_rect()
-    ) +
+  ) +
+  guides(
+    fill = guide_legend(override.aes = list(linetype = c(0, 0))), 
+    linetype = guide_legend(override.aes = list(fill = c(NA, NA)))
+  ) +
   labs(
     y = 'Location', 
     x = 'Effect size', 
@@ -545,7 +553,11 @@ knitr::include_graphics(here('figs/fieldcomp6.jpeg'))
 ```{r, message = F, results = 'hide'}
 
 p1 <- dissmod$plomod[[1]]
+p1[[1]] <- p1[[1]] + scale_y_continuous(limits= c(0 ,3))
+p1[[2]] <- p1[[2]] + scale_y_continuous(limits= c(-1.25, 2))
 p2 <- dissmod$plomod[[2]]
+p2[[1]] <- p2[[1]] + scale_y_continuous(limits= c(0 ,3))
+p2[[2]] <- p2[[2]] + scale_y_continuous(limits= c(-1.25, 2))
 p <- p2[[1]] + p2[[2]] + p1[[1]] + p1[[2]] + plot_layout(ncol = 2, guides = 'collect') & 
   theme(
     legend.position = 'bottom',
