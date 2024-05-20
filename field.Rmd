@@ -219,7 +219,7 @@ plofun(sizmod$phmod[[4]])
 Alternative plots, these show the post-hoc comparisons of the locations from an ANOVA of treatment x location, see the above plots for all comparisons:
 ```{r, message = F, results = 'hide'}
 # Olympia
-toplo <- sizmod %>% 
+toplo1 <- sizmod %>% 
   mutate(
     phmod = purrr::map(phmod, function(x){
       x$`Exposure:Station` %>% 
@@ -243,7 +243,7 @@ toplo <- sizmod %>%
     Organism = factor(Organism, levels = c('Olympia', 'Pacific'))
   ) 
 
-p1 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism, fill = Organism)) + 
+p1 <- ggplot(toplo1, aes(y = comp, x = diff, linetype = pcol, col = Organism, fill = Organism)) + 
   geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
   geom_col(position = position_dodge(width = 0.3), alpha = 0.7, color = NA, width = 0.3) + 
   geom_errorbar(aes(xmin = lwr, xmax = upr), position = position_dodge(width = 0.3), width = 0.2) + 
@@ -274,7 +274,7 @@ p1 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism, fil
   )
 
 # Olympia
-toplo <- sizmod %>% 
+toplo2 <- sizmod %>% 
   mutate(
     phmod = purrr::map(phmod, function(x){
       x$`Exposure:Station` %>% 
@@ -293,7 +293,7 @@ toplo <- sizmod %>%
     Organism = factor(Organism, levels = c('Olympia', 'Pacific'))
   ) 
 
-p2 <- ggplot(toplo, aes(y = comp, x = diff, linetype = pcol, col = Organism, fill = Organism)) + 
+p2 <- ggplot(toplo2, aes(y = comp, x = diff, linetype = pcol, col = Organism, fill = Organism)) + 
   geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
   geom_col(position = position_dodge(width = 0.3), color = NA, width = 0.3, alpha = 0.7) + 
   geom_errorbar(aes(xmin = lwr, xmax = upr), position = position_dodge(width = 0.3), width = 0.2) + 
@@ -329,10 +329,40 @@ p <- p1 + p2 + plot_layout(ncol = 1, heights = c(0.8, 1))
 jpeg(here('figs/fieldcomp.jpeg'), height = 8, width = 7, family = 'serif', units = 'in', res = 500)
 print(p)
 dev.off()
+
+
+p1 <- ggplot(toplo1, aes(y = comp, x = diff, col = Organism, fill = Organism)) + 
+  geom_vline(xintercept = 0, color = 'black', linetype = 'dotted') +
+  geom_col(position = position_dodge(width = 0.3), alpha = 0.7, color = NA, width = 0.3) + 
+  geom_errorbar(aes(xmin = lwr, xmax = upr), position = position_dodge(width = 0.3), width = 0.2) + 
+  facet_wrap(~var, scales = 'free_x', ncol = 2, strip.position = 'bottom', labeller = label_parsed) + 
+  theme_ipsum(plot_margin = margin(5, 5, 5, 5)) + 
+  theme(
+    strip.placement = 'outside',
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    strip.background = element_blank(), 
+    axis.title.y = element_blank(), 
+    legend.title = element_blank(), 
+    legend.position = 'top',
+    axis.title.x = element_text(hjust = 0.5),
+    strip.text.x = element_text(hjust = 0.5),
+    strip.text = element_text(size = 9),
+    panel.background = element_rect()
+  ) +
+  labs(
+    y = 'Location', 
+    x = 'Effect size'
+  )
+
+jpeg(here('figs/fieldcompa.jpeg'), height = 3, width = 5, units = 'in', res = 500, family = 'serif')
+print(p1)
+dev.off()
 ```
 
 ```{r, out.width = '60%'}
 knitr::include_graphics(here('figs/fieldcomp.jpeg'))
+knitr::include_graphics(here('figs/fieldcompa.jpeg'))
 ```
 
 ```{r, message = F, results = 'hide'}
